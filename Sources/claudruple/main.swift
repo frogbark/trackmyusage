@@ -20,6 +20,7 @@ let usage = """
       claudruple instances                      list installed instances
       claudruple usage                          plan usage per account
       claudruple steer [--yes]                  which account to work in
+      claudruple provider <list|add|probe|check>  metered service accounts
       claudruple capture [name]                 write a manifest from what is installed
       claudruple plan <manifest.yaml>           show what would change (read-only)
       claudruple apply <manifest.yaml>          make it so
@@ -38,6 +39,15 @@ let usage = """
       apply refuses to write to a running instance — Claude rewrites its extension
       registry on exit and would discard the changes. Quit the target first.
     """
+
+
+/// Pad to a column width by character count.
+///
+/// `String(format: "%-12s", …)` pads by *bytes*, so a single em dash or accented character
+/// silently corrupts both the alignment and the text itself.
+func pad(_ s: String, _ width: Int) -> String {
+    s.count >= width ? s : s + String(repeating: " ", count: width - s.count)
+}
 
 // MARK: - Rendering
 
@@ -155,11 +165,9 @@ func cmdSteer(activeOverride: String?, confirmed: Bool) {
     for (inst, a) in loaded {
         let b = a.binding(now: now)
         let tag = inst.name == active ? " (active)" : ""
-        print(String(
-            format: "  %-14s %-10s %5.1f%%  headroom %.0f%@",
-            (inst.name as NSString).utf8String!,
-            ((b?.metric.displayName ?? "—") as NSString).utf8String!,
-            b?.value ?? 0, a.headroom(now: now), tag))
+        print("  \(pad(inst.name, 14)) \(pad(b?.metric.displayName ?? "—", 10))"
+            + String(format: " %5.1f%%  headroom %.0f", b?.value ?? 0, a.headroom(now: now))
+            + tag)
     }
     printAdvice(advice, active: active)
 
@@ -194,9 +202,8 @@ func cmdUsage() {
         // Latest sample first, so a metric that stopped being reported does not linger.
         for metric in latest.metrics.keys.sorted(by: { $0.displayName < $1.displayName }) {
             guard let value = latest.metrics[metric] else { continue }
-            var line = String(
-                format: "    %-20s %@ %5.1f%%", (metric.displayName as NSString).utf8String!,
-                bar(value), value)
+            var line = "    \(pad(metric.displayName, 20)) \(bar(value)) "
+                + String(format: "%5.1f%%", value)
 
             if let f = history.forecast(for: metric, now: now) {
                 if f.isExhausted {
@@ -351,6 +358,8 @@ case "usage":
     cmdUsage()
 case "steer":
     cmdSteer(activeOverride: activeOverride, confirmed: confirmed)
+case "provider":
+    ProviderCommands.run(Array(args.dropFirst()))
 case "capture":
     cmdCapture(args.count > 1 ? args[1] : nil)
 case "plan", "apply":

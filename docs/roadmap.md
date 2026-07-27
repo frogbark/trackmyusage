@@ -76,53 +76,108 @@ within seconds of launch.
 
 ## Phase 3 — Multi-provider telemetry
 
-One `UsageSnapshot` shape across every provider, so a single view and a single alerting
-engine serve all of them:
+**In progress.** The SDK, the credential store and one verified adapter are built; the
+remaining fifteen are deliberately absent rather than stubbed.
+
+### Why only one adapter so far
+
+A parser written from a remembered API shape is indistinguishable from a correct one until
+it reports the wrong number, and a usage dashboard that is quietly wrong is worse than one
+that is honestly incomplete. ElevenLabs shipped because its response shape was verified
+against current documentation. OpenAI's reference is behind a 403 and GitHub's usage
+endpoint was not in the page that documents its billing API, so neither was written.
+
+`claudruple provider probe <id>` exists to close that gap: it performs the real call and
+prints the raw body, so a parser can be written against fact and the response saved as a
+fixture. That is also the mechanism that lets contributors add a provider without anyone
+else needing an account with them.
+
+### The adapter contract
 
 ```swift
-struct Metric {
-  let key: String      // "five_hour", "weekly", "credits", "spend_usd", "seats"
-  let kind: Kind       // .percentOfLimit | .absolute | .currency | .count
-  let value: Double
-  let limit: Double?
-  let window: Window   // .rolling(5.hours) | .calendarMonth | .billingPeriod | .none
-  let resetsAt: Date?
+public protocol UsageProviderAdapter: Sendable {
+    static var id: String { get }
+    static var displayName: String { get }
+    static var credentialSpec: CredentialSpec { get }
+    static var capabilities: ProviderCapabilities { get }
+
+    func request(credential: String) throws -> URLRequest
+    func parse(_ data: Data, now: Date) throws -> ProviderSnapshot
 }
 ```
 
-Tiered honestly by API feasibility:
+Request-building and parsing are separate on purpose. Parsing is where the risk and the
+churn live, and keeping it a pure function of `Data` means every adapter is verifiable
+offline against a recorded fixture.
 
-| Tier | Providers | Notes |
-|---|---|---|
-| 1 — local | Claude | `plan-usage-history.json`; no credentials; offline |
-| 2 — solid APIs | OpenAI, GitHub, Vercel, Twilio, ElevenLabs, Sentry, PostHog | Real spend/quota endpoints, clean read-only scopes |
-| 3 — workable | Firecrawl, Resend, Stripe, Supabase, Modal, Inngest | Thinner data. **Stripe is revenue, not spend** — shown on its own axis |
-| 4 — verify | Hostinger, Higgsfield, OpenArt | Public usage APIs uncertain; fall back to manual entry |
+Everything normalises to one shape so a single view and a single alerting engine can serve
+all of them. `utilization` is *derived* from value and limit, never reported: uncapped spend
+yields nil rather than a percentage invented against a budget the user never set, and only
+capped metrics can be a snapshot's binding constraint — an uncapped $9,999 must not outrank
+a quota at 95%.
+
+### Credentials
+
+Keychain only, one service per provider, `AfterFirstUnlockThisDeviceOnly` and never synced.
+Keys are read from stdin rather than a flag, because an argument lands in shell history and
+in the process list. Every adapter declares the minimum scope that makes it work, in code,
+so the setup flow and the docs cannot drift apart.
+
+### Remaining, in order of API quality
+
+| Tier | Providers |
+|---|---|
+| Verified | ElevenLabs ✅ |
+| Expected to be straightforward | OpenAI, GitHub, Vercel, Twilio, Sentry, PostHog |
+| Workable, thinner data | Firecrawl, Resend, Stripe (revenue, separate axis), Supabase, Modal, Inngest |
+| Unknown until probed | Hostinger, Higgsfield, OpenArt — may end up manual entry |
 
 **API-only, never scrape.** Where no usage API exists, report unavailable or accept manual
-entry. Scraping billing pages is brittle and generally violates ToS.
+entry. A **renewal calendar** needs no usage API at all and is probably the broadest-appeal
+feature in this phase.
 
-Cross-cutting: a **renewal calendar** (what renews when, total monthly commitment) needs no
-usage API at all and is probably the broadest-appeal feature here.
+## Phase 5 — Codex Desktop
 
-Credentials live in the Keychain only, per-provider ACL, never on disk or in the repo. Each
-adapter documents the **minimum read-only scope**, so a leaked token cannot spend money or
-mutate infrastructure.
+Same problem, second app. Assessed against the real install rather than assumed —
+`/Applications/ChatGPT.app` **is** Codex Desktop (bundle id `com.openai.codex`,
+version 26.721.41059).
 
-### Adapter SDK — the growth engine
+### What transfers
 
-```swift
-protocol UsageProvider {
-  static var id: String { get }
-  static var credentialSpec: CredentialSpec { get }
-  var capabilities: ProviderCapabilities { get }
-  func fetch() async throws -> [UsageSnapshot]
-}
-```
+It is Electron, so the shape of the solution carries over: a real bundle per instance with
+its own `CFBundleIdentifier`, `--user-data-dir` for the profile, quarantine cleared, and
+re-signed inside-out. It calls `setAsDefaultProtocolClient` exactly like Claude, and claims
+`codex://`, so the same last-launch-wins tug-of-war applies and the broker generalises —
+it already resolves handlers by scheme, and needs only a second scheme registered.
 
-Every adapter ships recorded HTTP fixtures and runs against a shared conformance suite, so a
-contributor can add or verify a provider without owning a paid account. That is what turns
-17 integrations one person maintains into 17 the community maintains.
+### What does not
+
+**It is sandboxed**, and that changes the cost of cloning. Its entitlements include
+`com.apple.security.app-sandbox`, `com.apple.security.application-groups`,
+`keychain-access-groups` and `com.apple.developer.aps-environment` — all Team-ID-bound and
+unclaimable by a re-signed clone. Claude loses only WebAuthn and hardware-key login this
+way; a Codex clone would additionally lose its app group, its sandbox container identity
+and push notifications. Whether the app still functions usefully after that is the first
+thing to establish, and it may be the finding that stops this.
+
+It also ships **Sparkle**, so clones go stale and self-update attempts may fail signature
+checks against a re-signed bundle.
+
+### Open questions, each cheap to answer
+
+1. **Where does its userData name come from?** `CFBundleName` is `ChatGPT`, the framework is
+   `Codex Framework.framework`, and the profile lands at `~/Library/Application
+   Support/Codex` — three different names. No `app.setName("…")` literal was found, so the
+   mechanism differs from Claude's and needs a probe before `--user-data-dir` is trusted.
+2. **Where are its Electron helpers?** `Contents/Frameworks` holds only `Codex
+   Framework.framework` and `Sparkle.framework` — no `<Name> Helper.app`. Claude aborted at
+   startup when `CFBundleName` moved away from its helpers; whatever Codex does instead
+   determines whether that trap exists here at all.
+3. **Does the sandbox survive ad-hoc re-signing**, and does the app still start without its
+   app group?
+
+Sequenced after the provider work: it shares the instance engine, and the engine should
+settle before it grows a second app's worth of special cases.
 
 ## Phase 4 — Release
 
