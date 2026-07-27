@@ -10,6 +10,7 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [
         .library(name: "ClaudrupleKit", targets: ["ClaudrupleKit"]),
+        .library(name: "ClaudrupleUsage", targets: ["ClaudrupleUsage"]),
         .executable(name: "ClaudrupleLink", targets: ["ClaudrupleLink"]),
         .executable(name: "claudruple", targets: ["claudruple"]),
         .executable(name: "ClaudrupleApp", targets: ["ClaudrupleApp"]),
@@ -22,9 +23,15 @@ let package = Package(
     ],
     targets: [
         .target(name: "ClaudrupleKit", dependencies: ["Yams"]),
+        // Deliberately depends on nothing. ClaudrupleKit is macOS-bound — InstanceLocator
+        // reads /Applications, SyncApplier imports Darwin — and the usage layer has to
+        // build on Linux and Windows, where the wallpaper runs but Claude Desktop does not
+        // exist. Claude-specific reading stays behind an adapter that depends on both.
+        .target(name: "ClaudrupleUsage"),
         .executableTarget(name: "ClaudrupleLink"),
         .executableTarget(name: "claudruple", dependencies: ["ClaudrupleKit"]),
         .executableTarget(name: "ClaudrupleApp", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleKitTests", dependencies: ["ClaudrupleKit"]),
+        .testTarget(name: "ClaudrupleUsageTests", dependencies: ["ClaudrupleUsage"]),
     ]
 )
