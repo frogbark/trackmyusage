@@ -91,8 +91,21 @@ extension UsageProvider {
                 provider: id, account: reading.account, observedAt: now,
                 status: .ok, metrics: reading.metrics)
         } catch {
-            return failed(.unavailable(describe(error)), now)
+            return failed(classify(error), now)
         }
+    }
+
+    /// A rejected credential is not an outage.
+    ///
+    /// 401 and 403 both mean the token has to be replaced — one is invalid, the other
+    /// lacks the scope, and either way waiting will not help. Reporting them as
+    /// `unavailable` alongside a 500 sends someone to wait out a token that will never
+    /// start working. Everything else genuinely is worth retrying.
+    private func classify(_ error: Error) -> UsageSnapshot.Status {
+        if case HTTPError.status(let code) = error, code == 401 || code == 403 {
+            return .unauthorized
+        }
+        return .unavailable(describe(error))
     }
 
     /// A failed provider still occupies its row. Dropping it would make an outage look
