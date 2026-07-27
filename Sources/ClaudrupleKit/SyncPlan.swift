@@ -8,11 +8,19 @@ public struct InstanceSpec: Sendable, Equatable {
     /// Extensions the manifest does not manage but must never remove. Exists so `.exact`
     /// stays usable without sacrificing deliberate per-instance one-offs.
     public let keep: [String]
+    /// Intent only — `--prune` still gates whether removal actually happens.
+    public let policy: DriftPolicy
 
-    public init(name: String, extensions: [String], keep: [String] = []) {
+    public init(
+        name: String,
+        extensions: [String],
+        keep: [String] = [],
+        policy: DriftPolicy = .additive
+    ) {
         self.name = name
         self.extensions = extensions
         self.keep = keep
+        self.policy = policy
     }
 }
 

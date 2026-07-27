@@ -12,8 +12,14 @@ let package = Package(
         .library(name: "ClaudrupleKit", targets: ["ClaudrupleKit"]),
         .executable(name: "ClaudrupleLink", targets: ["ClaudrupleLink"]),
     ],
+    dependencies: [
+        // The manifest is meant to be committed to dotfiles repos and shared, so it needs
+        // comments — which rules out JSON. Yams is pure Swift and the de facto standard;
+        // a hand-rolled YAML subset is where parser bugs live.
+        .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.0")
+    ],
     targets: [
-        .target(name: "ClaudrupleKit"),
+        .target(name: "ClaudrupleKit", dependencies: ["Yams"]),
         .executableTarget(name: "ClaudrupleLink"),
         .testTarget(name: "ClaudrupleKitTests", dependencies: ["ClaudrupleKit"]),
     ]
