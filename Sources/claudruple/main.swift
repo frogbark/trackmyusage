@@ -19,6 +19,7 @@ let usage = """
     USAGE
       claudruple instances                      list installed instances
       claudruple usage                          plan usage per account
+      claudruple steer [--yes]                  which account to work in
       claudruple capture [name]                 write a manifest from what is installed
       claudruple plan <manifest.yaml>           show what would change (read-only)
       claudruple apply <manifest.yaml>          make it so
@@ -30,6 +31,8 @@ let usage = """
                          (default: whichever instance covers the most of what is needed)
       --with-settings    also copy Claude Extensions Settings. OFF by default because
                          those files hold API keys and filesystem grants.
+      --active <name>    treat this instance as the one in use (steer)
+      --yes              actually perform the switch (steer)
 
     NOTES
       apply refuses to write to a running instance — Claude rewrites its extension
@@ -101,6 +104,77 @@ func relative(_ date: Date, from now: Date) -> String {
     if h < 1 { return "in \(Int((h * 60).rounded()))m" }
     if h < 48 { return "in \(String(format: "%.1f", h))h" }
     return "in \(Int((h / 24).rounded()))d"
+}
+
+func loadAccounts() -> [(DiscoveredInstance, AccountUsage)] {
+    InstanceLocator.discover().compactMap { inst in
+        let file = inst.profileURL.appendingPathComponent("plan-usage-history.json")
+        guard let h = try? UsageHistory.parse(contentsOf: file), !h.samples.isEmpty
+        else { return nil }
+        return (inst, AccountUsage(
+            instanceName: inst.name, bundleID: inst.bundleID, history: h))
+    }
+}
+
+/// Which account is actually being worked in.
+///
+/// Frontmost is useless from a terminal — that is Terminal. Instead infer it from the data:
+/// the instance whose 5-hour window is climbing fastest is the one consuming budget right
+/// now. `--active` overrides when the guess is wrong.
+func inferActive(_ accounts: [AccountUsage], now: Date, override: String?) -> String? {
+    if let override { return override }
+    return accounts
+        .compactMap { a -> (String, Double)? in
+            guard let f = a.history.forecast(for: .fiveHour, now: now),
+                  let rate = f.pointsPerHourOrNil, rate > 0
+            else { return nil }
+            return (a.instanceName, rate)
+        }
+        .max { $0.1 < $1.1 }?.0
+}
+
+func printAdvice(_ advice: SteeringAdvice, active: String?) {
+    let mark: String
+    switch advice.urgency {
+    case .none: mark = "·"
+    case .approaching: mark = "!"
+    case .exhausted: mark = "!!"
+    }
+    print("\n  \(mark) \(active.map { "\($0): " } ?? "")\(advice.reason)")
+}
+
+func cmdSteer(activeOverride: String?, confirmed: Bool) {
+    let now = Date()
+    let loaded = loadAccounts()
+    guard !loaded.isEmpty else { return print("no usage history found") }
+
+    let accounts = loaded.map(\.1)
+    let active = inferActive(accounts, now: now, override: activeOverride)
+    let advice = Steering.advise(accounts: accounts, activeInstance: active, now: now)
+
+    for (inst, a) in loaded {
+        let b = a.binding(now: now)
+        let tag = inst.name == active ? " (active)" : ""
+        print(String(
+            format: "  %-14s %-10s %5.1f%%  headroom %.0f%@",
+            (inst.name as NSString).utf8String!,
+            ((b?.metric.displayName ?? "—") as NSString).utf8String!,
+            b?.value ?? 0, a.headroom(now: now), tag))
+    }
+    printAdvice(advice, active: active)
+
+    guard let target = advice.recommended,
+          let dest = loaded.first(where: { $0.0.name == target })?.0
+    else { return print("") }
+
+    guard confirmed else {
+        // Confirmation is the default: switching accounts mid-task is disruptive, and a
+        // tool that reshuffles windows unprompted stops being trusted.
+        print("    run with --yes to bring \(target) to the front\n")
+        return
+    }
+    NSWorkspace.shared.open(dest.appURL)
+    print("    switched to \(target)\n")
 }
 
 func cmdUsage() {
@@ -254,19 +328,29 @@ var args = Array(CommandLine.arguments.dropFirst())
 let prune = args.contains("--prune")
 let withSettings = args.contains("--with-settings")
 
+var activeOverride: String?
+if let i = args.firstIndex(of: "--active") {
+    guard i + 1 < args.count else { die("--active needs an instance name") }
+    activeOverride = args[i + 1]
+    args.removeSubrange(i...(i + 1))
+}
+let confirmed = args.contains("--yes")
+
 var sourceOverride: String?
 if let i = args.firstIndex(of: "--from") {
     guard i + 1 < args.count else { die("--from needs an instance name") }
     sourceOverride = args[i + 1]
     args.removeSubrange(i...(i + 1))
 }
-args.removeAll { $0 == "--prune" || $0 == "--with-settings" }
+args.removeAll { $0 == "--prune" || $0 == "--with-settings" || $0 == "--yes" }
 
 switch args.first {
 case "instances":
     cmdInstances()
 case "usage":
     cmdUsage()
+case "steer":
+    cmdSteer(activeOverride: activeOverride, confirmed: confirmed)
 case "capture":
     cmdCapture(args.count > 1 ? args[1] : nil)
 case "plan", "apply":

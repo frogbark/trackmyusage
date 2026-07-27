@@ -52,8 +52,15 @@ clone. Not needed for Phase 0, but it determines how managed settings can be app
 
 ## Phase 2 — Usage and steering
 
-Gated on calibrating `fh` / `sd` against the in-app usage UI. Alerting on a misread field is
-worse than no alerting.
+The calibration gate is closed: the field map, the limit list and the `xu` constant were read
+out of the app bundle directly, so nothing here rests on inference. Parsing, forecasting and
+the steering decision engine are built and covered by tests; the menu bar surface and
+notifications wait on the GUI.
+
+**Not implemented, deliberately:** switching the active Claude Code credential. The keychain
+holds `Claude Code-credentials` alongside `Claude Code-credentials-<hash>` entries, but how
+the CLI selects among them is not established, and writing keychain items on a guess risks
+locking someone out of their own tooling. It needs its own investigation before any code.
 
 - Sampler merges `plan-usage-history.json` per instance by org UUID into SQLite, backfilling
   existing history so the first launch already has a chart.

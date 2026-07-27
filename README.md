@@ -105,6 +105,20 @@ Two rules the engine enforces rather than documents:
 - **`apply` refuses to write to a running instance.** Claude rewrites its extension registry
   on exit and would discard the changes.
 
+### Seeing usage across accounts
+
+```bash
+.build/release/claudruple usage    # per-account limits, burn rate, time to exhaustion
+.build/release/claudruple steer    # which account to work in
+```
+
+No credentials and no network: Claude Desktop already records plan utilisation to
+`plan-usage-history.json` in each profile, tagged by organisation. Claudruple reads the same
+numbers the app does, for every account at once. Existing monitors estimate usage from
+Claude Code token logs; this is the app's own accounting.
+
+`steer` names the account with headroom and stops there. `--yes` performs the switch.
+
 ### Scripts
 
 | Script | Purpose |
