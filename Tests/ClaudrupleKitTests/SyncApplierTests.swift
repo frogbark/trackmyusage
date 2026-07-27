@@ -67,6 +67,18 @@ final class SyncApplierTests: XCTestCase {
         try ProfileReader.read(name: "x", profileURL: profile).extensions
     }
 
+    /// Options with the backup root pointed inside the temp tree.
+    ///
+    /// The default is the user's home directory. Without this every run of the suite left
+    /// eight directories in ~/Claudruple-Backups; several hundred had accumulated before
+    /// anyone noticed, because nothing failed.
+    private func options(includeSettings: Bool = false) -> SyncApplier.Options {
+        var o = SyncApplier.Options()
+        o.includeSettings = includeSettings
+        o.backupRoot = source.deletingLastPathComponent().appendingPathComponent("backups")
+        return o
+    }
+
     private func plan(installs: [String] = [], removals: [String] = []) -> SyncPlan {
         SyncPlan(installs: installs, removals: removals, syncableConfigKeys: [], refused: [])
     }
@@ -79,7 +91,8 @@ final class SyncApplierTests: XCTestCase {
         XCTAssertThrowsError(
             try SyncApplier.apply(
                 plan: plan(installs: ["ext.a"]),
-                from: source, to: target, targetName: "Work", running: .running)
+                from: source, to: target, targetName: "Work", running: .running,
+                options: options())
         ) { error in
             XCTAssertEqual(error as? ApplyError, .instanceRunning(name: "Work"))
         }
@@ -95,7 +108,8 @@ final class SyncApplierTests: XCTestCase {
 
         let result = try SyncApplier.apply(
             plan: plan(installs: ["ext.a"]),
-            from: source, to: target, targetName: "Work", running: .stopped)
+            from: source, to: target, targetName: "Work", running: .stopped,
+            options: options())
 
         XCTAssertEqual(result.installed, ["ext.a"])
         XCTAssertEqual(try installedIDs(in: target), ["ext.a"])
@@ -113,7 +127,8 @@ final class SyncApplierTests: XCTestCase {
 
         _ = try SyncApplier.apply(
             plan: plan(installs: ["ext.a"]),
-            from: source, to: target, targetName: "Work", running: .stopped)
+            from: source, to: target, targetName: "Work", running: .stopped,
+            options: options())
 
         XCTAssertEqual(
             try registryIDs(in: target), ["ext.a", "ext.existing"],
@@ -125,7 +140,8 @@ final class SyncApplierTests: XCTestCase {
 
         let result = try SyncApplier.apply(
             plan: plan(installs: ["ext.a", "ext.absent"]),
-            from: source, to: target, targetName: "Work", running: .stopped)
+            from: source, to: target, targetName: "Work", running: .stopped,
+            options: options())
 
         XCTAssertEqual(result.installed, ["ext.a"])
         XCTAssertEqual(result.skipped.map(\.id), ["ext.absent"])
@@ -145,7 +161,8 @@ final class SyncApplierTests: XCTestCase {
 
         _ = try SyncApplier.apply(
             plan: plan(installs: ["ext.a"]),
-            from: source, to: target, targetName: "Work", running: .stopped)
+            from: source, to: target, targetName: "Work", running: .stopped,
+            options: options())
 
         let settings = target.appendingPathComponent("\(SyncApplier.settingsDirectory)/ext.a.json")
         XCTAssertFalse(fm.fileExists(atPath: settings.path))
@@ -155,13 +172,10 @@ final class SyncApplierTests: XCTestCase {
         try plant("ext.a", in: source, settings: #"{"userConfig":{"api_key":"sk-secret"}}"#)
         try writeRegistry(["ext.a"], in: source)
 
-        var options = SyncApplier.Options()
-        options.includeSettings = true
-
         _ = try SyncApplier.apply(
             plan: plan(installs: ["ext.a"]),
             from: source, to: target, targetName: "Work",
-            running: .stopped, options: options)
+            running: .stopped, options: options(includeSettings: true))
 
         let settings = target.appendingPathComponent("\(SyncApplier.settingsDirectory)/ext.a.json")
         XCTAssertTrue(fm.fileExists(atPath: settings.path))
@@ -176,7 +190,8 @@ final class SyncApplierTests: XCTestCase {
 
         let result = try SyncApplier.apply(
             plan: plan(removals: ["ext.gone"]),
-            from: source, to: target, targetName: "Work", running: .stopped)
+            from: source, to: target, targetName: "Work", running: .stopped,
+            options: options())
 
         XCTAssertEqual(result.removed, ["ext.gone"])
         XCTAssertEqual(try installedIDs(in: target), ["ext.stays"])
@@ -186,7 +201,8 @@ final class SyncApplierTests: XCTestCase {
     func testRemovingSomethingAbsentIsNotAnError() throws {
         let result = try SyncApplier.apply(
             plan: plan(removals: ["never.installed"]),
-            from: source, to: target, targetName: "Work", running: .stopped)
+            from: source, to: target, targetName: "Work", running: .stopped,
+            options: options())
 
         XCTAssertEqual(result.removed, [])
         XCTAssertEqual(result.skipped.map(\.id), ["never.installed"])
@@ -200,13 +216,39 @@ final class SyncApplierTests: XCTestCase {
 
         let result = try SyncApplier.apply(
             plan: plan(removals: ["ext.gone"]),
-            from: source, to: target, targetName: "Work", running: .stopped)
+            from: source, to: target, targetName: "Work", running: .stopped,
+            options: options())
 
         let backup = try XCTUnwrap(result.backupURL, "a removal must be recoverable")
         XCTAssertTrue(
             fm.fileExists(
                 atPath: backup.appendingPathComponent(
                     "\(ProfileReader.extensionsDirectory)/ext.gone").path))
+    }
+
+    func testBackupsGoWhereTheyAreToldAndNowhereElse() throws {
+        // Regression. The backup root used to be hardcoded to the user's home directory,
+        // so every run of this suite deposited eight snapshots in ~/Claudruple-Backups.
+        // Nothing failed, so several hundred accumulated before anyone looked.
+        try plant("ext.gone", in: target)
+        try writeRegistry(["ext.gone"], in: target)
+
+        let home = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Claudruple-Backups")
+        let before = (try? fm.contentsOfDirectory(atPath: home.path))?.count ?? 0
+
+        let result = try SyncApplier.apply(
+            plan: plan(removals: ["ext.gone"]),
+            from: source, to: target, targetName: "Work", running: .stopped,
+            options: options())
+
+        let backup = try XCTUnwrap(result.backupURL)
+        XCTAssertTrue(
+            backup.path.hasPrefix(source.deletingLastPathComponent().path),
+            "the snapshot must land inside the temp tree, not \(backup.path)")
+
+        let after = (try? fm.contentsOfDirectory(atPath: home.path))?.count ?? 0
+        XCTAssertEqual(after, before, "the suite must leave the home directory alone")
     }
 
     func testNoBackupIsTakenWhenNothingWouldChange() throws {

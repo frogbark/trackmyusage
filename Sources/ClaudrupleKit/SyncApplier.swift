@@ -59,6 +59,14 @@ public enum SyncApplier {
         /// Snapshot the profile before the first write. APFS clonefile, so it is
         /// effectively free and there is no reason to turn it off outside tests.
         public var backup: Bool = true
+        /// Where snapshots go.
+        ///
+        /// Injectable because the default is the user's home directory, and a test that
+        /// operates on a temp profile has no business writing there. Left hardcoded, every
+        /// run of the suite deposited eight directories in `~/Claudruple-Backups` — which
+        /// is exactly what happened, several hundred times, before anyone looked.
+        public var backupRoot: URL = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Claudruple-Backups")
 
         public init() {}
     }
@@ -79,7 +87,7 @@ public enum SyncApplier {
             return ApplyResult(installed: [], removed: [], skipped: [], backupURL: nil)
         }
 
-        let backupURL = options.backup ? try snapshot(target) : nil
+        let backupURL = options.backup ? try snapshot(target, into: options.backupRoot) : nil
 
         var installed: [String] = []
         var removed: [String] = []
@@ -201,7 +209,7 @@ public enum SyncApplier {
         try FileManager.default.copyItem(at: src, to: dst)
     }
 
-    private static func snapshot(_ profile: URL) throws -> URL {
+    private static func snapshot(_ profile: URL, into root: URL) throws -> URL {
         let stamp = ISO8601DateFormatter().string(from: Date())
             .replacingOccurrences(of: ":", with: "")
         // A second-resolution timestamp is not a unique name. Two applies to the same
@@ -209,8 +217,7 @@ public enum SyncApplier {
         // the running-state guard — i.e. as a mid-write failure on a real profile. The
         // random suffix costs nothing and removes the whole class.
         let token = String(UUID().uuidString.prefix(6))
-        let backup = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Claudruple-Backups")
+        let backup = root
             .appendingPathComponent("sync-\(profile.lastPathComponent)-\(stamp)-\(token)")
 
         try FileManager.default.createDirectory(
