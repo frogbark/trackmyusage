@@ -205,6 +205,7 @@ public enum ProviderRegistry {
         ElevenLabsAdapter(),
         TwilioAdapter(),
         StripeAdapter(),
+        GitHubAdapter(),
     ]
 
     public static func adapter(id: String) -> (any UsageProviderAdapter)? {
