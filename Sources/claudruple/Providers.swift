@@ -26,16 +26,12 @@ enum ProviderCommands {
         print("\n  provider      credential   reports")
         for p in ProviderRegistry.all {
             let has = ((try? s.get(p.credentialSpec.keychainService)) ?? nil) != nil
-            var reports: [String] = []
-            if p.capabilities.reportsQuota { reports.append("quota") }
-            if p.capabilities.reportsSpend { reports.append("spend") }
             print("  \(pad(p.id, 13)) \(pad(has ? "stored" : "—", 12)) "
-                + reports.joined(separator: ", "))
+                + p.capabilities.summary)
         }
         print("""
 
-          Not yet implemented: openai, github, vercel, twilio, sentry, posthog, firecrawl,
-          resend, stripe, supabase, modal, inngest, hostinger, higgsfield, openart.
+          Not yet implemented: \(ProviderRegistry.pending.joined(separator: ", ")).
           Each needs its real response captured first — see `provider probe`.
 
         """)

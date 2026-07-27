@@ -129,12 +129,27 @@ public struct CredentialSpec: Sendable, Equatable {
 public struct ProviderCapabilities: Sendable, Equatable {
     public let reportsSpend: Bool
     public let reportsQuota: Bool
+    /// Money coming *in*. Distinct from spend because the two must never be summed.
+    public let reportsRevenue: Bool
     public let reportsHistory: Bool
 
-    public init(reportsSpend: Bool, reportsQuota: Bool, reportsHistory: Bool = false) {
+    public init(
+        reportsSpend: Bool, reportsQuota: Bool,
+        reportsRevenue: Bool = false, reportsHistory: Bool = false
+    ) {
         self.reportsSpend = reportsSpend
         self.reportsQuota = reportsQuota
+        self.reportsRevenue = reportsRevenue
         self.reportsHistory = reportsHistory
+    }
+
+    /// Human-readable summary, so callers do not each invent their own wording.
+    public var summary: String {
+        var parts: [String] = []
+        if reportsQuota { parts.append("quota") }
+        if reportsSpend { parts.append("spend") }
+        if reportsRevenue { parts.append("revenue") }
+        return parts.isEmpty ? "—" : parts.joined(separator: ", ")
     }
 }
 
@@ -187,10 +202,30 @@ extension UsageProviderAdapter {
 /// each parser can be written against fact.
 public enum ProviderRegistry {
     public static let all: [any UsageProviderAdapter] = [
-        ElevenLabsAdapter()
+        ElevenLabsAdapter(),
+        TwilioAdapter(),
+        StripeAdapter(),
     ]
 
     public static func adapter(id: String) -> (any UsageProviderAdapter)? {
         all.first { $0.id == id }
+    }
+
+    /// Every provider this project intends to cover.
+    ///
+    /// `pending` is derived from this rather than maintained by hand — a hardcoded
+    /// "not yet implemented" list goes stale the moment an adapter lands, and then the
+    /// tool is telling the user something untrue about itself.
+    public static let intended = [
+        "claude", "openai", "github", "vercel", "twilio", "elevenlabs", "sentry",
+        "posthog", "firecrawl", "resend", "stripe", "supabase", "modal", "inngest",
+        "hostinger", "higgsfield", "openart",
+    ]
+
+    /// Intended providers with no adapter yet. `claude` is excluded: it needs no adapter
+    /// because its usage is read from local files.
+    public static var pending: [String] {
+        let built = Set(all.map(\.id)).union(["claude"])
+        return intended.filter { !built.contains($0) }
     }
 }
