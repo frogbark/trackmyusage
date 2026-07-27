@@ -65,6 +65,11 @@ public struct ProviderMetric: Sendable, Equatable {
             let f = NumberFormatter()
             f.numberStyle = .decimal
             f.maximumFractionDigits = 0
+            // Pinned: the default is the machine's locale, which renders 1234 as "1.234"
+            // or "1 234" — the latter with a non-breaking space that then travels into an
+            // SVG text node and rasterises differently per platform. en_US rather than
+            // en_US_POSIX, which has no grouping separator at all.
+            f.locale = Locale(identifier: "en_US")
             let n = f.string(from: NSNumber(value: value)) ?? "\(Int(value))"
             return n + (unit.map { " \($0)" } ?? "")
         }
@@ -73,28 +78,55 @@ public struct ProviderMetric: Sendable, Equatable {
 
 /// Everything one provider reported at one moment.
 public struct ProviderSnapshot: Sendable, Equatable {
+
+    /// Whether this snapshot carries a measurement at all.
+    ///
+    /// Distinct from an empty metric list, and the distinction has to survive to the
+    /// screen: drawing "we could not ask" as an empty bar reads as plenty of headroom,
+    /// which is the opposite of what is true. Three cases because they call for three
+    /// different responses — connect something, wait, or nothing at all.
+    public enum Status: Sendable, Equatable {
+        /// Answered.
+        case ok
+        /// Asked and got nothing usable. Carries the reason, which reaches the UI.
+        case unavailable(String)
+        /// No credential stored, or one the provider rejected.
+        case unauthorized
+    }
+
     public let providerID: String
     /// Org, team or account name, when the API exposes one.
     public let accountLabel: String?
     public let capturedAt: Date
+    public let status: Status
     public let metrics: [ProviderMetric]
 
+    /// `status` defaults to `.ok` so an adapter that parsed successfully says nothing about
+    /// it — a parser returning a snapshot has by definition succeeded.
     public init(
-        providerID: String, accountLabel: String?, capturedAt: Date, metrics: [ProviderMetric]
+        providerID: String, accountLabel: String?, capturedAt: Date,
+        status: Status = .ok, metrics: [ProviderMetric]
     ) {
         self.providerID = providerID
         self.accountLabel = accountLabel
         self.capturedAt = capturedAt
+        self.status = status
         self.metrics = metrics
     }
+
+    public var isReporting: Bool { status == .ok }
 
     /// The metric closest to its cap.
     ///
     /// Only capped metrics compete. An uncapped $9,999 spend must not outrank a quota at
     /// 95% merely because its raw number is larger — they are not on the same scale, and
     /// comparing them is the mistake this type exists to prevent.
+    ///
+    /// A snapshot that is not reporting has no binding metric even if it carries stale
+    /// ones, so a failed refresh cannot leave a confident number on screen.
     public var binding: ProviderMetric? {
-        metrics
+        guard isReporting else { return nil }
+        return metrics
             .filter { $0.utilization != nil }
             .max { ($0.utilization ?? 0) < ($1.utilization ?? 0) }
     }
@@ -203,6 +235,7 @@ extension UsageProviderAdapter {
 public enum ProviderRegistry {
     public static let all: [any UsageProviderAdapter] = [
         ElevenLabsAdapter(),
+        GitHubAdapter(),
         TwilioAdapter(),
         StripeAdapter(),
     ]

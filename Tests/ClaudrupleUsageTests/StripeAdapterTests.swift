@@ -1,5 +1,5 @@
 import XCTest
-@testable import ClaudrupleKit
+@testable import ClaudrupleUsage
 
 /// Stripe adapter.
 ///
@@ -100,5 +100,10 @@ final class StripeAdapterTests: XCTestCase {
 
     func testMalformedJSONIsAnError() {
         XCTAssertThrowsError(try adapter.parse(Data("nope".utf8), now: now))
+    }
+
+    func testItConformsToTheAdapterContract() async {
+        await ProviderConformance.assertConformance(
+            StripeAdapter(), fixtures: .init(success: fixture))
     }
 }

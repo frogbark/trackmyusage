@@ -39,7 +39,7 @@ final class ClaudeDiscoveryTests: XCTestCase {
             name: "Work", bundleID: "com.example.work", profileURL: profile)
 
         XCTAssertTrue(snapshot.isReporting)
-        XCTAssertEqual(snapshot.account, "Work")
+        XCTAssertEqual(snapshot.accountLabel, "Work")
         XCTAssertEqual(
             snapshot.binding?.key, "seven_day",
             "66 beats 25, so the weekly cap is what will stop work first")

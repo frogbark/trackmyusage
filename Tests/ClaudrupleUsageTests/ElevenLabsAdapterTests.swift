@@ -1,5 +1,5 @@
 import XCTest
-@testable import ClaudrupleKit
+@testable import ClaudrupleUsage
 
 /// ElevenLabs adapter.
 ///
@@ -102,5 +102,10 @@ final class ElevenLabsAdapterTests: XCTestCase {
         let spec = ElevenLabsAdapter.credentialSpec
         XCTAssertFalse(spec.createURL.isEmpty)
         XCTAssertFalse(spec.minimumScope.isEmpty)
+    }
+
+    func testItConformsToTheAdapterContract() async {
+        await ProviderConformance.assertConformance(
+            ElevenLabsAdapter(), fixtures: .init(success: fixture))
     }
 }

@@ -12,19 +12,19 @@ final class WallpaperSVGTests: XCTestCase {
 
     private func snapshot(
         _ provider: String, _ utilization: Double, key: String = "usage"
-    ) -> UsageSnapshot {
-        UsageSnapshot(
-            provider: provider, account: nil, observedAt: now, status: .ok,
+    ) -> ProviderSnapshot {
+        ProviderSnapshot(
+            providerID: provider, accountLabel: nil, capturedAt: now, status: .ok,
             metrics: [
-                Metric(
-                    key: key, kind: .percentOfLimit, value: utilization,
-                    limit: nil, window: .rolling(3600), resetsAt: nil)
+                ProviderMetric(
+                    key: key, label: key, kind: .percentOfLimit, value: utilization,
+                    limit: nil, unit: nil, window: .rolling(3600), resetsAt: nil)
             ])
     }
 
-    private func unavailable(_ provider: String) -> UsageSnapshot {
-        UsageSnapshot(
-            provider: provider, account: nil, observedAt: now,
+    private func unavailable(_ provider: String) -> ProviderSnapshot {
+        ProviderSnapshot(
+            providerID: provider, accountLabel: nil, capturedAt: now,
             status: .unavailable("no public usage API"), metrics: [])
     }
 
@@ -123,18 +123,34 @@ final class WallpaperSVGTests: XCTestCase {
         XCTAssertTrue(svg.contains("nodata"), "and marked structurally for styling")
     }
 
+    func testAnUnconnectedProviderSaysSoRatherThanReportingNoData() {
+        // The status enum separates "never connected" from "asked and got nothing", and
+        // the screen should too: one is fixed by pasting a token, the other by waiting.
+        // Collapsing them throws away the only actionable half.
+        let svg = WallpaperSVG.render(
+            [
+                ProviderSnapshot(
+                    providerID: "github", accountLabel: nil, capturedAt: now,
+                    status: .unauthorized, metrics: [])
+            ],
+            density: .full, canvas: .init(width: 2560, height: 1440), generatedAt: now)
+
+        XCTAssertTrue(svg.contains("not connected"))
+        XCTAssertFalse(svg.contains("no data"), "that wording is for a failed request")
+    }
+
     func testTheAccountNameLabelsTheRowWhenThereIsOne() {
         // Two accounts of one provider is the case this whole project exists for, and
         // labelling both rows "claude" makes the wallpaper useless for precisely that.
         // Caught by rendering real data: the machine has two Claude accounts and the rail
         // showed the same word twice.
         let accounts = ["Claude", "Claude Two"].map { name in
-            UsageSnapshot(
-                provider: "claude", account: name, observedAt: now, status: .ok,
+            ProviderSnapshot(
+                providerID: "claude", accountLabel: name, capturedAt: now, status: .ok,
                 metrics: [
-                    Metric(
-                        key: "seven_day", kind: .percentOfLimit, value: 40, limit: nil,
-                        window: .rolling(604_800), resetsAt: nil)
+                    ProviderMetric(
+                        key: "seven_day", label: "seven_day", kind: .percentOfLimit, value: 40,
+                        limit: nil, unit: nil, window: .rolling(604_800), resetsAt: nil)
                 ])
         }
         let svg = WallpaperSVG.render(
@@ -180,12 +196,12 @@ final class WallpaperSVGTests: XCTestCase {
         // Stripe reports revenue, which has no cap at all. Labelling that "no data" is
         // wrong twice over: the reading is present, and having no limit is not the same
         // as having no measurement.
-        let stripe = UsageSnapshot(
-            provider: "stripe", account: nil, observedAt: now, status: .ok,
+        let stripe = ProviderSnapshot(
+            providerID: "stripe", accountLabel: nil, capturedAt: now, status: .ok,
             metrics: [
-                Metric(
-                    key: "revenue_usd", kind: .currency, value: 98_000,
-                    limit: nil, window: .calendarMonth, resetsAt: nil)
+                ProviderMetric(
+                    key: "revenue_usd", label: "Revenue", kind: .currency, value: 98_000,
+                    limit: nil, unit: "USD", window: .calendarMonth, resetsAt: nil)
             ])
         let svg = WallpaperSVG.render(
             [stripe], density: .full, canvas: .init(width: 2560, height: 1440),
@@ -193,19 +209,19 @@ final class WallpaperSVGTests: XCTestCase {
 
         XCTAssertFalse(svg.contains("no data"), "the reading exists, it just has no cap")
         XCTAssertTrue(svg.contains("uncapped"), "but it is its own state, not a gauge")
-        XCTAssertTrue(svg.contains("$98,000"), "shown in its own units")
+        XCTAssertTrue(svg.contains("98,000 USD"), "shown in its own units, not assumed dollars")
     }
 
     func testALargeCountIsGroupedWithoutDependingOnLocale() {
         // A locale-aware formatter would emit "98.000" or "98 000" depending on the
         // machine, and a non-breaking space inside an SVG attribute is a rasteriser bug
         // waiting to happen. Grouping is done by hand for that reason.
-        let seats = UsageSnapshot(
-            provider: "github", account: nil, observedAt: now, status: .ok,
+        let seats = ProviderSnapshot(
+            providerID: "github", accountLabel: nil, capturedAt: now, status: .ok,
             metrics: [
-                Metric(
-                    key: "seats", kind: .count, value: 1_234_567,
-                    limit: nil, window: .none, resetsAt: nil)
+                ProviderMetric(
+                    key: "seats", label: "seats", kind: .count, value: 1_234_567,
+                    limit: nil, unit: nil, window: .none, resetsAt: nil)
             ])
         let svg = WallpaperSVG.render(
             [seats], density: .full, canvas: .init(width: 2560, height: 1440),

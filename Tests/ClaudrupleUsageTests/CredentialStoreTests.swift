@@ -1,5 +1,5 @@
 import XCTest
-@testable import ClaudrupleKit
+@testable import ClaudrupleUsage
 
 final class CredentialStoreTests: XCTestCase {
 

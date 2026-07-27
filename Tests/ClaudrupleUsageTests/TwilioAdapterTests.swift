@@ -1,5 +1,5 @@
 import XCTest
-@testable import ClaudrupleKit
+@testable import ClaudrupleUsage
 
 /// Twilio adapter.
 ///
@@ -137,5 +137,10 @@ final class TwilioAdapterTests: XCTestCase {
 
     func testMalformedJSONIsAnError() {
         XCTAssertThrowsError(try adapter.parse(Data("<html>403</html>".utf8), now: now))
+    }
+
+    func testItConformsToTheAdapterContract() async {
+        await ProviderConformance.assertConformance(
+            TwilioAdapter(), fixtures: .init(success: fixture, secret: "AC123:tok_conformance_secret"))
     }
 }

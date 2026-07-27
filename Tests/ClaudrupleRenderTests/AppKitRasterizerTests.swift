@@ -16,12 +16,12 @@ final class AppKitRasterizerTests: XCTestCase {
     /// against a known rectangle.
     private var overlay: String {
         let snapshots = ["alpha", "beta"].map { name in
-            UsageSnapshot(
-                provider: name, account: nil, observedAt: now, status: .ok,
+            ProviderSnapshot(
+                providerID: name, accountLabel: nil, capturedAt: now, status: .ok,
                 metrics: [
-                    Metric(
-                        key: "usage", kind: .percentOfLimit, value: 40, limit: nil,
-                        window: .rolling(3600), resetsAt: nil)
+                    ProviderMetric(
+                        key: "usage", label: "usage", kind: .percentOfLimit, value: 40,
+                        limit: nil, unit: nil, window: .rolling(3600), resetsAt: nil)
                 ])
         }
         return WallpaperSVG.render(

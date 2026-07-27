@@ -60,14 +60,14 @@ public enum WallpaperSVG {
     /// a perfectly good reading and simply no ceiling to measure it against; collapsing
     /// that into "no data" would hide a number we actually have.
     private enum State: String {
-        case ok, warn, over, nodata, uncapped
+        case ok, warn, over, nodata, unconnected, uncapped
 
         var ink: String {
             switch self {
             case .ok: return Ink.ok
             case .warn: return Ink.warn
             case .over: return Ink.over
-            case .nodata: return Ink.absent
+            case .nodata, .unconnected: return Ink.absent
             case .uncapped: return Ink.muted
             }
         }
@@ -85,7 +85,7 @@ public enum WallpaperSVG {
     // MARK: - Entry point
 
     public static func render(
-        _ snapshots: [UsageSnapshot],
+        _ snapshots: [ProviderSnapshot],
         density: WallpaperDensity,
         canvas: WallpaperCanvas,
         generatedAt: Date
@@ -109,7 +109,14 @@ public enum WallpaperSVG {
             """
     }
 
-    private static func row(for snapshot: UsageSnapshot) -> Row {
+    private static func row(for snapshot: ProviderSnapshot) -> Row {
+        // The two kinds of absence are kept apart all the way to the screen, because they
+        // call for different things: one is fixed by pasting a token, the other by waiting.
+        if case .unauthorized = snapshot.status {
+            return Row(
+                name: displayName(of: snapshot), utilization: nil, display: "not connected",
+                state: .unconnected)
+        }
         guard snapshot.isReporting else {
             return Row(
                 name: displayName(of: snapshot), utilization: nil, display: "no data",
@@ -141,15 +148,20 @@ public enum WallpaperSVG {
     /// situation this project exists to manage, and labelling every one of them "claude"
     /// makes the wallpaper useless for exactly its main case. Where a credential identifies
     /// the account implicitly there is nothing to disambiguate, so the provider stands.
-    private static func displayName(of snapshot: UsageSnapshot) -> String {
-        snapshot.account ?? snapshot.provider
+    private static func displayName(of snapshot: ProviderSnapshot) -> String {
+        snapshot.accountLabel ?? snapshot.providerID
     }
 
-    private static func measure(_ metric: Metric) -> String {
+    private static func measure(_ metric: ProviderMetric) -> String {
         switch metric.kind {
-        case .currency: return "$\(grouped(metric.value))"
+        // The unit is shown rather than assumed: Twilio reports its own price_unit, and
+        // rendering EUR with a dollar sign is a wrong number, not a cosmetic slip.
+        case .currency:
+            return grouped(metric.value) + (metric.unit.map { " \($0)" } ?? "")
         case .percentOfLimit: return "\(grouped(metric.value))%"
-        case .absolute, .count: return grouped(metric.value)
+        // No unit on counts: on a rail this narrow "1,240 messages" pushes the name out,
+        // and the count alone is what the glance is for.
+        case .count: return grouped(metric.value)
         }
     }
 
@@ -210,7 +222,7 @@ public enum WallpaperSVG {
         guard let utilization = row.utilization else {
             out += label(
                 row.display, x: valueRight, y: y, size: valueSize,
-                ink: row.state == .nodata ? Ink.absent : Ink.primary, anchor: "end")
+                ink: row.state == .uncapped ? Ink.primary : Ink.absent, anchor: "end")
             return out + "</g>"
         }
 

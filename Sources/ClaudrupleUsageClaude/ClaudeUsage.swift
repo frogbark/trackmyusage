@@ -4,9 +4,11 @@ import Foundation
 
 /// Maps Claude Desktop's own accounting onto the provider-neutral shape.
 ///
-/// Tier 1 in the roadmap's terms, and the only adapter that needs no credential: the data
-/// is already on disk in each instance's profile, so it works offline and backfills the
-/// existing history the first time it runs.
+/// Tier 1, and the only provider that needs no credential: the data is already on disk in
+/// each instance's profile, so it works offline and backfills the existing history the first
+/// time it runs. It is deliberately not a `UsageProviderAdapter` — there is no request to
+/// build and no response to parse, and forcing a local file through an HTTP-shaped protocol
+/// would mean inventing both.
 public enum ClaudeUsage {
 
     public static let providerID = "claude"
@@ -21,7 +23,7 @@ public enum ClaudeUsage {
     /// routine rather than exceptional — and one torn read must not take down the render
     /// for every other account.
     public static func snapshot(name: String, bundleID: String, profileURL: URL)
-        -> UsageSnapshot
+        -> ProviderSnapshot
     {
         let file = profileURL.appendingPathComponent(historyFilename)
         do {
@@ -29,24 +31,24 @@ public enum ClaudeUsage {
             return snapshot(
                 of: AccountUsage(instanceName: name, bundleID: bundleID, history: history))
         } catch {
-            return UsageSnapshot(
-                provider: providerID, account: name, observedAt: .distantPast,
+            return ProviderSnapshot(
+                providerID: providerID, accountLabel: name, capturedAt: .distantPast,
                 status: .unavailable("\(error)"), metrics: [])
         }
     }
 
     /// Every Claude instance on this machine.
-    public static func discover() -> [UsageSnapshot] {
+    public static func discover() -> [ProviderSnapshot] {
         InstanceLocator.discover().map {
             snapshot(name: $0.name, bundleID: $0.bundleID, profileURL: $0.profileURL)
         }
     }
 
-    public static func snapshot(of account: AccountUsage) -> UsageSnapshot {
+    public static func snapshot(of account: AccountUsage) -> ProviderSnapshot {
         guard let latest = account.history.samples.last else {
-            return UsageSnapshot(
-                provider: providerID, account: account.instanceName,
-                observedAt: .distantPast,
+            return ProviderSnapshot(
+                providerID: providerID, accountLabel: account.instanceName,
+                capturedAt: .distantPast,
                 status: .unavailable("no usage history yet"), metrics: [])
         }
 
@@ -58,9 +60,9 @@ public enum ClaudeUsage {
             .map { normalize($0.key, value: $0.value) }
             .sorted { $0.key < $1.key }
 
-        return UsageSnapshot(
-            provider: providerID, account: account.instanceName,
-            observedAt: latest.timestamp, status: .ok, metrics: metrics)
+        return ProviderSnapshot(
+            providerID: providerID, accountLabel: account.instanceName,
+            capturedAt: latest.timestamp, status: .ok, metrics: metrics)
     }
 
     /// One rule decides whether a reading may drive a decision: does it have a window?
@@ -70,15 +72,15 @@ public enum ClaudeUsage {
     /// recognise — has no denominator and no known semantics, so it carries no limit and
     /// can therefore never be the binding metric. That is the same exclusion `Steering`
     /// makes, expressed structurally here instead of restated as a second filter.
-    private static func normalize(_ metric: UsageMetric, value: Double) -> Metric {
+    private static func normalize(_ metric: UsageMetric, value: Double) -> ProviderMetric {
         guard let window = metric.window else {
-            return Metric(
-                key: key(of: metric), kind: .absolute, value: value,
-                limit: nil, window: .none, resetsAt: nil)
+            return ProviderMetric(
+                key: key(of: metric), label: metric.displayName, kind: .count,
+                value: value, limit: nil, unit: nil, window: .none)
         }
-        return Metric(
-            key: key(of: metric), kind: .percentOfLimit, value: value,
-            limit: nil, window: .rolling(window), resetsAt: nil)
+        return ProviderMetric(
+            key: key(of: metric), label: metric.displayName, kind: .percentOfLimit,
+            value: value, limit: nil, unit: nil, window: .rolling(window))
     }
 
     /// Stable keys, matching the names in the app's own limit map rather than inventing

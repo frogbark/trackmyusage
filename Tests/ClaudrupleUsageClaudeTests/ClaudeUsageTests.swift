@@ -45,7 +45,7 @@ final class ClaudeUsageTests: XCTestCase {
         // reports when the reading was actually taken.
         let snapshot = ClaudeUsage.snapshot(of: account([(t0, [.fiveHour: 12])]))
 
-        XCTAssertEqual(snapshot.observedAt, t0)
+        XCTAssertEqual(snapshot.capturedAt, t0)
     }
 
     func testOnlyTheNewestSampleIsReported() {
@@ -104,9 +104,9 @@ final class ClaudeUsageTests: XCTestCase {
     func testTheInstanceNameIdentifiesTheAccount() {
         let snapshot = ClaudeUsage.snapshot(of: account([(t0, [.fiveHour: 5])], name: "Personal"))
 
-        XCTAssertEqual(snapshot.provider, "claude")
+        XCTAssertEqual(snapshot.providerID, "claude")
         XCTAssertEqual(
-            snapshot.account, "Personal",
+            snapshot.accountLabel, "Personal",
             "several Claude accounts coexist, so the snapshot must say which one")
     }
 }

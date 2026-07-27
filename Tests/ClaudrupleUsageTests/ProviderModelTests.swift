@@ -1,5 +1,5 @@
 import XCTest
-@testable import ClaudrupleKit
+@testable import ClaudrupleUsage
 
 /// The normalised shape every provider reports into.
 ///

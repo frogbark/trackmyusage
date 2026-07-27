@@ -31,12 +31,19 @@ func outputDirectory() -> URL {
     return caches.appendingPathComponent("Claudruple/wallpaper", isDirectory: true)
 }
 
-/// Everything we know right now, from every adapter that has one.
+/// Everything we know right now, from every source that has something to say.
 ///
-/// Only Claude today. The other sixteen plug in here, and because they all arrive as
-/// `UsageSnapshot` nothing below this line changes when they do.
-func collect() -> [UsageSnapshot] {
-    ClaudeUsage.discover()
+/// Claude is read from local files and needs no credential; the rest are HTTP adapters run
+/// through the shared runner, which turns every way they can fail into a status rather than
+/// an error. A provider with no credential stored costs no network call at all.
+func collect(now: Date) async -> [ProviderSnapshot] {
+    var out = ClaudeUsage.discover()
+    let runner = ProviderRunner()
+    let store = KeychainCredentialStore()
+    for adapter in ProviderRegistry.all {
+        out.append(await runner.snapshot(of: adapter, credentials: store, now: now))
+    }
+    return out
 }
 
 struct Rendered {
@@ -46,11 +53,11 @@ struct Rendered {
 }
 
 /// Renders every display and returns where each image landed.
-func renderAll(density: WallpaperDensity, into directory: URL) throws -> [Rendered] {
+func renderAll(density: WallpaperDensity, into directory: URL) async throws -> [Rendered] {
     let desktop = try DesktopFactory.current()
     let displays = try desktop.displays()
-    let snapshots = collect()
     let now = Date()
+    let snapshots = await collect(now: now)
 
     let stateFile = directory.appendingPathComponent("state.json")
     var state = WallpaperState.load(from: stateFile)
@@ -88,27 +95,27 @@ func renderAll(density: WallpaperDensity, into directory: URL) throws -> [Render
     return results
 }
 
-func describe(_ snapshots: [UsageSnapshot]) {
+func describe(_ snapshots: [ProviderSnapshot]) {
     guard !snapshots.isEmpty else {
         print("  no providers reporting")
         return
     }
-    for snapshot in snapshots.sorted(by: { $0.provider < $1.provider }) {
-        let account = snapshot.account.map { " (\($0))" } ?? ""
+    for snapshot in snapshots.sorted(by: { $0.providerID < $1.providerID }) {
+        let account = snapshot.accountLabel.map { " (\($0))" } ?? ""
         guard snapshot.isReporting else {
             let reason: String
             if case .unavailable(let detail) = snapshot.status { reason = detail } else {
                 reason = "unauthorized"
             }
-            print("  \(snapshot.provider)\(account)   — \(reason)")
+            print("  \(snapshot.providerID)\(account)   — \(reason)")
             continue
         }
         guard let binding = snapshot.binding, let value = binding.utilization else {
-            print("  \(snapshot.provider)\(account)   no capped metric")
+            print("  \(snapshot.providerID)\(account)   no capped metric")
             continue
         }
         print(
-            "  \(snapshot.provider)\(account)   \(binding.key) at "
+            "  \(snapshot.providerID)\(account)   \(binding.key) at "
                 + String(format: "%.0f%%", value))
     }
 }
@@ -134,7 +141,7 @@ let command = arguments.first ?? "help"
 do {
     switch command {
     case "status":
-        let snapshots = collect()
+        let snapshots = await collect(now: Date())
         print("\nproviders:")
         describe(snapshots)
 
@@ -156,7 +163,7 @@ do {
         print()
 
     case "render":
-        for rendered in try renderAll(density: density, into: outputDirectory()) {
+        for rendered in try await renderAll(density: density, into: outputDirectory()) {
             print(
                 "\(rendered.display.name): \(rendered.file.path)  (over "
                     + (rendered.origin?.lastPathComponent ?? "a generated background") + ")")
@@ -164,7 +171,7 @@ do {
 
     case "apply":
         let desktop = try DesktopFactory.current()
-        for rendered in try renderAll(density: density, into: outputDirectory()) {
+        for rendered in try await renderAll(density: density, into: outputDirectory()) {
             try desktop.setWallpaper(rendered.file, for: rendered.display)
             print("\(rendered.display.name): set")
         }
