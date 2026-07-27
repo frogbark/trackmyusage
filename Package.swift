@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "ClaudrupleKit", targets: ["ClaudrupleKit"]),
         .executable(name: "ClaudrupleLink", targets: ["ClaudrupleLink"]),
         .executable(name: "claudruple", targets: ["claudruple"]),
+        .executable(name: "ClaudrupleApp", targets: ["ClaudrupleApp"]),
     ],
     dependencies: [
         // The manifest is meant to be committed to dotfiles repos and shared, so it needs
@@ -23,6 +24,7 @@ let package = Package(
         .target(name: "ClaudrupleKit", dependencies: ["Yams"]),
         .executableTarget(name: "ClaudrupleLink"),
         .executableTarget(name: "claudruple", dependencies: ["ClaudrupleKit"]),
+        .executableTarget(name: "ClaudrupleApp", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleKitTests", dependencies: ["ClaudrupleKit"]),
     ]
 )

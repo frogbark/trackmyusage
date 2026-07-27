@@ -6,9 +6,9 @@ Each instance gets its own macOS app identity, its own profile, and its own plac
 Dock. A small broker makes sure sign-in and MCP OAuth callbacks reach the account that
 asked for them, instead of whichever instance happened to launch last.
 
-> **Status: early.** Instance creation, deep-link routing, and config sync (`plan` and
-> `apply`) work and are in daily use. The usage dashboard and GUI in
-> [`docs/roadmap.md`](docs/roadmap.md) are still ahead.
+> **Status: early.** Instance creation, deep-link routing, config sync, usage tracking and
+> the menu bar app work and are in daily use. Multi-provider telemetry
+> ([`docs/roadmap.md`](docs/roadmap.md)) is still ahead.
 
 Claudruple never bundles or redistributes Claude Desktop. It clones the copy already
 installed on your machine, leaves `app.asar` byte-for-byte untouched, and never handles
@@ -104,6 +104,22 @@ Two rules the engine enforces rather than documents:
   unconfigured. `--with-settings` overrides this and copies the credentials too.
 - **`apply` refuses to write to a running instance.** Claude rewrites its extension registry
   on exit and would discard the changes.
+
+### The menu bar app
+
+```bash
+./scripts/build-app.sh
+cp -Rp build/Claudruple.app /Applications/Claudruple/
+open -a "/Applications/Claudruple/Claudruple.app"
+```
+
+Every account's binding limit, always visible — `61% · 100%`, with a warning glyph when one
+is spent. The panel shows each limit, time-to-exhaustion where a trend is measurable, and a
+switch button when another account has materially more headroom. Notifications fire once per
+threshold per window and re-arm when the window rolls.
+
+No Dock icon (`LSUIElement`). Add it to **System Settings → General → Login Items** to have
+it start with the machine.
 
 ### Seeing usage across accounts
 
