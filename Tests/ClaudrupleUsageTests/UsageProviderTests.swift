@@ -98,14 +98,14 @@ private final class StubProvider: UsageProvider, @unchecked Sendable {
             instructions: "Settings → Tokens → create a read-only token")
     }
 
-    func fetch(secret: String?, now: Date) async throws -> [Metric] {
+    func fetch(secret: String?, now: Date) async throws -> ProviderReading {
         if let failure { throw failure }
         seenSecret = secret
-        return [
+        return ProviderReading(metrics: [
             Metric(
                 key: "usage", kind: .percentOfLimit, value: 42, limit: nil,
                 window: .rolling(3600), resetsAt: nil)
-        ]
+        ])
     }
 }
 

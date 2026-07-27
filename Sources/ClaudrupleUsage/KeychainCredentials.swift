@@ -53,7 +53,10 @@ public struct KeychainCredentials: CredentialStore {
         if status == errSecItemNotFound {
             var insert = baseQuery(provider)
             insert[kSecValueData as String] = data
-            insert[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            // AfterFirstUnlock so a launch agent can read it on a booted-but-not-logged-in
+            // machine; ThisDeviceOnly because a provider API key has no business
+            // replicating to iCloud Keychain and every other device on the account.
+            insert[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
             let added = SecItemAdd(insert as CFDictionary, nil)
             guard added == errSecSuccess else { throw CredentialError.keychain(Int(added)) }
             return

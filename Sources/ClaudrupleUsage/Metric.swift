@@ -29,22 +29,33 @@ public enum MetricWindow: Sendable, Equatable {
 /// One reading from one provider.
 public struct Metric: Sendable, Equatable {
     public let key: String
+    /// What to call this on screen. Keys are stable identifiers like `Actions.minutes`;
+    /// a person should not have to read one.
+    public let label: String
     public let kind: MetricKind
     public let value: Double
     /// The cap, where one is known. Nil is common and load-bearing: revenue has no cap,
     /// and several providers expose consumption without exposing the quota it counts against.
     public let limit: Double?
+    /// Minutes, messages, USD, characters. Without it a renderer can only show a bare
+    /// number, and "1200" alone does not say whether that is close to anything.
+    public let unit: String?
     public let window: MetricWindow
     public let resetsAt: Date?
 
     public init(
         key: String, kind: MetricKind, value: Double,
-        limit: Double?, window: MetricWindow, resetsAt: Date?
+        limit: Double?, window: MetricWindow, resetsAt: Date?,
+        label: String? = nil, unit: String? = nil
     ) {
         self.key = key
+        // Defaulting to the key keeps every existing call site valid while making the
+        // label available where an adapter has something better to say.
+        self.label = label ?? key
         self.kind = kind
         self.value = value
         self.limit = limit
+        self.unit = unit
         self.window = window
         self.resetsAt = resetsAt
     }

@@ -22,7 +22,7 @@ final class GitHubProviderTests: XCTestCase {
         """#
 
     private var fixtures: ProviderConformance.Fixtures {
-        .init(success: [GitHubProvider.endpoint: Self.recorded])
+        .init(success: [GitHubProvider.rateLimitEndpoint: Self.recorded])
     }
 
     // MARK: - Conformance
@@ -76,7 +76,7 @@ final class GitHubProviderTests: XCTestCase {
         // GitHub returns different resource sets for different token types. A resource that
         // is absent is unknown, and reporting it as 0% would read as unlimited headroom.
         let client = FixtureHTTPClient(json: [
-            GitHubProvider.endpoint: #"{"resources":{"core":{"limit":5000,"remaining":4900,"reset":1785151794,"used":100}}}"#
+            GitHubProvider.rateLimitEndpoint: #"{"resources":{"core":{"limit":5000,"remaining":4900,"reset":1785151794,"used":100}}}"#
         ])
         let snapshot = try await self.snapshot(client: client)
 
@@ -84,7 +84,7 @@ final class GitHubProviderTests: XCTestCase {
     }
 
     func testTheTokenIsSentAsABearerHeader() async throws {
-        let client = FixtureHTTPClient(json: [GitHubProvider.endpoint: Self.recorded])
+        let client = FixtureHTTPClient(json: [GitHubProvider.rateLimitEndpoint: Self.recorded])
         _ = try await snapshot(client: client)
 
         let request = try XCTUnwrap(client.recordedRequests.all.first)
@@ -97,7 +97,7 @@ final class GitHubProviderTests: XCTestCase {
     // MARK: -
 
     private func snapshot(client: FixtureHTTPClient? = nil) async throws -> UsageSnapshot {
-        let http = client ?? FixtureHTTPClient(json: [GitHubProvider.endpoint: Self.recorded])
+        let http = client ?? FixtureHTTPClient(json: [GitHubProvider.rateLimitEndpoint: Self.recorded])
         let store = MutableCredentials()
         try store.set("gh_test_token", for: "github")
         return await GitHubProvider(http: http).snapshot(credentials: store, now: now)

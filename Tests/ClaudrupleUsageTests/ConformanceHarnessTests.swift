@@ -68,7 +68,7 @@ private struct ExampleProvider: UsageProvider {
     let http: HTTPClient
     var secretInQuery = false
 
-    func fetch(secret: String?, now: Date) async throws -> [Metric] {
+    func fetch(secret: String?, now: Date) async throws -> ProviderReading {
         var url = URL(string: "https://api.example.com/v1/usage")!
         var headers: [String: String] = [:]
 
@@ -87,10 +87,10 @@ private struct ExampleProvider: UsageProvider {
             let used = object["used"] as? Double
         else { throw HTTPError.malformedResponse("expected {used, limit}") }
 
-        return [
+        return ProviderReading(metrics: [
             Metric(
                 key: "requests", kind: .absolute, value: used,
                 limit: object["limit"] as? Double, window: .calendarMonth, resetsAt: nil)
-        ]
+        ])
     }
 }

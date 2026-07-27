@@ -13,11 +13,37 @@ public struct CredentialSpec: Sendable, Equatable {
     public let readOnlyScope: String
     /// Where to click to get one.
     public let instructions: String
+    /// The page that mints the token, so the setup flow can open it directly instead of
+    /// making someone hunt for it.
+    public let createURL: String?
+    /// What a broader token would allow. Stated plainly, because the trade-off is only a
+    /// real choice if the cost of the easy option is visible at the moment of choosing.
+    public let scopeWarning: String?
 
-    public init(required: Bool, readOnlyScope: String, instructions: String) {
+    public init(
+        required: Bool, readOnlyScope: String, instructions: String,
+        createURL: String? = nil, scopeWarning: String? = nil
+    ) {
         self.required = required
         self.readOnlyScope = readOnlyScope
         self.instructions = instructions
+        self.createURL = createURL
+        self.scopeWarning = scopeWarning
+    }
+}
+
+/// What an adapter returns: readings, plus which account they came from.
+///
+/// The account travels with the readings rather than being stamped afterwards, because
+/// only the adapter can know it — Stripe reports live vs test, ElevenLabs reports the plan
+/// tier, and both are parsed out of the same response as the numbers.
+public struct ProviderReading: Sendable, Equatable {
+    public let account: String?
+    public let metrics: [Metric]
+
+    public init(account: String? = nil, metrics: [Metric]) {
+        self.account = account
+        self.metrics = metrics
     }
 }
 
@@ -37,7 +63,7 @@ public protocol UsageProvider: Sendable {
     var credentialSpec: CredentialSpec { get }
 
     /// Returns the current readings. Throwing is expected rather than exceptional.
-    func fetch(secret: String?, now: Date) async throws -> [Metric]
+    func fetch(secret: String?, now: Date) async throws -> ProviderReading
 }
 
 extension UsageProvider {
@@ -60,9 +86,10 @@ extension UsageProvider {
         }
 
         do {
-            let metrics = try await fetch(secret: secret, now: now)
+            let reading = try await fetch(secret: secret, now: now)
             return UsageSnapshot(
-                provider: id, account: nil, observedAt: now, status: .ok, metrics: metrics)
+                provider: id, account: reading.account, observedAt: now,
+                status: .ok, metrics: reading.metrics)
         } catch {
             return failed(.unavailable(describe(error)), now)
         }

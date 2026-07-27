@@ -51,7 +51,7 @@ let package = Package(
                 "ClaudrupleDesktop", "ClaudrupleRender", "ClaudrupleUsage",
                 "ClaudrupleUsageClaude",
             ]),
-        .executableTarget(name: "claudruple", dependencies: ["ClaudrupleKit"]),
+        .executableTarget(name: "claudruple", dependencies: ["ClaudrupleKit", "ClaudrupleUsage"]),
         .executableTarget(name: "ClaudrupleApp", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleKitTests", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleUsageTests", dependencies: ["ClaudrupleUsage"]),
