@@ -28,10 +28,18 @@ let package = Package(
         // build on Linux and Windows, where the wallpaper runs but Claude Desktop does not
         // exist. Claude-specific reading stays behind an adapter that depends on both.
         .target(name: "ClaudrupleUsage"),
+        // The bridge, and the only place the two worlds meet: Claude's local history is
+        // read through ClaudrupleKit, then mapped onto the provider-neutral shape.
+        .target(
+            name: "ClaudrupleUsageClaude",
+            dependencies: ["ClaudrupleKit", "ClaudrupleUsage"]),
         .executableTarget(name: "ClaudrupleLink"),
         .executableTarget(name: "claudruple", dependencies: ["ClaudrupleKit"]),
         .executableTarget(name: "ClaudrupleApp", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleKitTests", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleUsageTests", dependencies: ["ClaudrupleUsage"]),
+        .testTarget(
+            name: "ClaudrupleUsageClaudeTests",
+            dependencies: ["ClaudrupleUsageClaude", "ClaudrupleKit", "ClaudrupleUsage"]),
     ]
 )
