@@ -3,11 +3,16 @@ import Foundation
 /// What a manifest says an instance should look like.
 public struct InstanceSpec: Sendable, Equatable {
     public let name: String
+    /// Extensions the manifest manages: installed if missing.
     public let extensions: [String]
+    /// Extensions the manifest does not manage but must never remove. Exists so `.exact`
+    /// stays usable without sacrificing deliberate per-instance one-offs.
+    public let keep: [String]
 
-    public init(name: String, extensions: [String]) {
+    public init(name: String, extensions: [String], keep: [String] = []) {
         self.name = name
         self.extensions = extensions
+        self.keep = keep
     }
 }
 
@@ -37,6 +42,8 @@ public struct Refusal: Sendable, Equatable {
 public struct SyncPlan: Sendable, Equatable {
     /// Extension IDs present in the spec but missing from the instance.
     public let installs: [String]
+    /// Extension IDs to uninstall. Always empty unless the policy is `.exact`.
+    public let removals: [String]
     /// Config keys that are safe to carry across instances.
     public let syncableConfigKeys: [String]
     /// Keys deliberately excluded, with the scope that disqualified them. Surfaced rather
@@ -44,9 +51,15 @@ public struct SyncPlan: Sendable, Equatable {
     /// from a bug.
     public let refused: [Refusal]
 
-    public var isEmpty: Bool { installs.isEmpty }
+    public var isEmpty: Bool { installs.isEmpty && removals.isEmpty }
 
-    public static func between(spec: InstanceSpec, state: InstanceState) -> SyncPlan {
+    /// The policy defaults to `.additive` so that every path which forgets to pass one
+    /// is non-destructive. Callers opt into removal explicitly; they never fall into it.
+    public static func between(
+        spec: InstanceSpec,
+        state: InstanceState,
+        policy: DriftPolicy = .additive
+    ) -> SyncPlan {
         let installs = Set(spec.extensions)
             .subtracting(state.extensions)
             .sorted()
@@ -62,6 +75,10 @@ public struct SyncPlan: Sendable, Equatable {
             }
         }
 
-        return SyncPlan(installs: installs, syncableConfigKeys: syncable, refused: refused)
+        return SyncPlan(
+            installs: installs,
+            removals: removals(spec: spec, state: state, policy: policy),
+            syncableConfigKeys: syncable,
+            refused: refused)
     }
 }
