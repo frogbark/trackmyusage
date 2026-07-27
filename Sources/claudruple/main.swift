@@ -18,6 +18,7 @@ let usage = """
 
     USAGE
       claudruple instances                      list installed instances
+      claudruple usage                          plan usage per account
       claudruple capture [name]                 write a manifest from what is installed
       claudruple plan <manifest.yaml>           show what would change (read-only)
       claudruple apply <manifest.yaml>          make it so
@@ -88,6 +89,57 @@ func cmdCapture(_ name: String?) {
             policy: .additive)
     }
     print(Manifest.render(specs), terminator: "")
+}
+
+func bar(_ pct: Double, width: Int = 24) -> String {
+    let filled = max(0, min(width, Int((pct / 100 * Double(width)).rounded())))
+    return String(repeating: "█", count: filled) + String(repeating: "·", count: width - filled)
+}
+
+func relative(_ date: Date, from now: Date) -> String {
+    let h = date.timeIntervalSince(now) / 3600
+    if h < 1 { return "in \(Int((h * 60).rounded()))m" }
+    if h < 48 { return "in \(String(format: "%.1f", h))h" }
+    return "in \(Int((h / 24).rounded()))d"
+}
+
+func cmdUsage() {
+    let now = Date()
+    var any = false
+
+    for inst in InstanceLocator.discover() {
+        let file = inst.profileURL.appendingPathComponent("plan-usage-history.json")
+        guard let history = try? UsageHistory.parse(contentsOf: file),
+              let latest = history.samples.last
+        else { continue }
+        any = true
+
+        let age = Int(now.timeIntervalSince(latest.timestamp) / 60)
+        print("\n  \(inst.name)   (updated \(age)m ago, \(history.samples.count) samples)")
+
+        // Latest sample first, so a metric that stopped being reported does not linger.
+        for metric in latest.metrics.keys.sorted(by: { $0.displayName < $1.displayName }) {
+            guard let value = latest.metrics[metric] else { continue }
+            var line = String(
+                format: "    %-20s %@ %5.1f%%", (metric.displayName as NSString).utf8String!,
+                bar(value), value)
+
+            if let f = history.forecast(for: metric, now: now) {
+                if f.isExhausted {
+                    line += "   EXHAUSTED"
+                } else if let at = f.exhaustionDate {
+                    line += String(
+                        format: "   +%.1f/h, full %@", f.pointsPerHour, relative(at, from: now))
+                } else if f.pointsPerHourOrNil == nil {
+                    // Distinguish "no trend measurable" from "trend is flat" — they look
+                    // identical in a bar and mean very different things.
+                    line += "   (no recent trend)"
+                }
+            }
+            print(line)
+        }
+    }
+    if !any { print("no usage history found") }
 }
 
 /// A plan says *install X* but not *from where* — extension payloads have to be copied
@@ -213,6 +265,8 @@ args.removeAll { $0 == "--prune" || $0 == "--with-settings" }
 switch args.first {
 case "instances":
     cmdInstances()
+case "usage":
+    cmdUsage()
 case "capture":
     cmdCapture(args.count > 1 ? args[1] : nil)
 case "plan", "apply":
