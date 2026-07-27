@@ -11,6 +11,37 @@ public enum ClaudeUsage {
 
     public static let providerID = "claude"
 
+    /// The file each instance writes its own accounting to.
+    public static let historyFilename = "plan-usage-history.json"
+
+    /// Reads one instance's profile.
+    ///
+    /// A malformed file is reported as unavailable rather than thrown. Claude writes this
+    /// file from another process on its own schedule, so reading a half-written one is
+    /// routine rather than exceptional — and one torn read must not take down the render
+    /// for every other account.
+    public static func snapshot(name: String, bundleID: String, profileURL: URL)
+        -> UsageSnapshot
+    {
+        let file = profileURL.appendingPathComponent(historyFilename)
+        do {
+            let history = try UsageHistory.parse(contentsOf: file)
+            return snapshot(
+                of: AccountUsage(instanceName: name, bundleID: bundleID, history: history))
+        } catch {
+            return UsageSnapshot(
+                provider: providerID, account: name, observedAt: .distantPast,
+                status: .unavailable("\(error)"), metrics: [])
+        }
+    }
+
+    /// Every Claude instance on this machine.
+    public static func discover() -> [UsageSnapshot] {
+        InstanceLocator.discover().map {
+            snapshot(name: $0.name, bundleID: $0.bundleID, profileURL: $0.profileURL)
+        }
+    }
+
     public static func snapshot(of account: AccountUsage) -> UsageSnapshot {
         guard let latest = account.history.samples.last else {
             return UsageSnapshot(

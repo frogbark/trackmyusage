@@ -112,7 +112,7 @@ public enum WallpaperSVG {
     private static func row(for snapshot: UsageSnapshot) -> Row {
         guard snapshot.isReporting else {
             return Row(
-                name: snapshot.provider, utilization: nil, display: "no data",
+                name: displayName(of: snapshot), utilization: nil, display: "no data",
                 state: .nodata)
         }
 
@@ -120,19 +120,29 @@ public enum WallpaperSVG {
             let state: State =
                 utilization >= 100 ? .over : (utilization >= 80 ? .warn : .ok)
             return Row(
-                name: snapshot.provider, utilization: utilization,
+                name: displayName(of: snapshot), utilization: utilization,
                 display: "\(grouped(utilization.rounded()))%", state: state)
         }
 
         // Reporting, but nothing here has a ceiling. Show the reading in its own units.
         guard let first = snapshot.metrics.first else {
             return Row(
-                name: snapshot.provider, utilization: nil, display: "no data",
+                name: displayName(of: snapshot), utilization: nil, display: "no data",
                 state: .nodata)
         }
         return Row(
-            name: snapshot.provider, utilization: nil, display: measure(first),
+            name: displayName(of: snapshot), utilization: nil, display: measure(first),
             state: .uncapped)
+    }
+
+    /// What to call the row.
+    ///
+    /// The account wins where there is one. Several accounts of a single provider is the
+    /// situation this project exists to manage, and labelling every one of them "claude"
+    /// makes the wallpaper useless for exactly its main case. Where a credential identifies
+    /// the account implicitly there is nothing to disambiguate, so the provider stands.
+    private static func displayName(of snapshot: UsageSnapshot) -> String {
+        snapshot.account ?? snapshot.provider
     }
 
     private static func measure(_ metric: Metric) -> String {

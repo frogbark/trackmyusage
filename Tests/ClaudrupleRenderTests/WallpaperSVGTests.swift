@@ -123,6 +123,36 @@ final class WallpaperSVGTests: XCTestCase {
         XCTAssertTrue(svg.contains("nodata"), "and marked structurally for styling")
     }
 
+    func testTheAccountNameLabelsTheRowWhenThereIsOne() {
+        // Two accounts of one provider is the case this whole project exists for, and
+        // labelling both rows "claude" makes the wallpaper useless for precisely that.
+        // Caught by rendering real data: the machine has two Claude accounts and the rail
+        // showed the same word twice.
+        let accounts = ["Claude", "Claude Two"].map { name in
+            UsageSnapshot(
+                provider: "claude", account: name, observedAt: now, status: .ok,
+                metrics: [
+                    Metric(
+                        key: "seven_day", kind: .percentOfLimit, value: 40, limit: nil,
+                        window: .rolling(604_800), resetsAt: nil)
+                ])
+        }
+        let svg = WallpaperSVG.render(
+            accounts, density: .full, canvas: .init(width: 2560, height: 1440),
+            generatedAt: now)
+
+        XCTAssertTrue(svg.contains(">Claude<"))
+        XCTAssertTrue(svg.contains(">Claude Two<"))
+    }
+
+    func testTheProviderNameLabelsTheRowWhenThereIsNoAccount() {
+        let svg = WallpaperSVG.render(
+            [snapshot("vercel", 20)], density: .full,
+            canvas: .init(width: 2560, height: 1440), generatedAt: now)
+
+        XCTAssertTrue(svg.contains(">vercel<"), "one unnamed account needs no extra label")
+    }
+
     func testALongProviderNameIsTruncatedRatherThanRunningIntoItsValue() {
         // Found by rendering rather than by asserting: "claude personal" overlapped its
         // own percentage. Nothing in the document is malformed when this happens, so only

@@ -12,7 +12,9 @@ let package = Package(
         .library(name: "ClaudrupleKit", targets: ["ClaudrupleKit"]),
         .library(name: "ClaudrupleUsage", targets: ["ClaudrupleUsage"]),
         .library(name: "ClaudrupleRender", targets: ["ClaudrupleRender"]),
+        .library(name: "ClaudrupleDesktop", targets: ["ClaudrupleDesktop"]),
         .executable(name: "ClaudrupleLink", targets: ["ClaudrupleLink"]),
+        .executable(name: "claudrupled", targets: ["claudrupled"]),
         .executable(name: "claudruple", targets: ["claudruple"]),
         .executable(name: "ClaudrupleApp", targets: ["ClaudrupleApp"]),
     ],
@@ -38,11 +40,24 @@ let package = Package(
         // design a pure function that diffs in a golden-file test, and leaves rasterising
         // as the only part that needs a platform.
         .target(name: "ClaudrupleRender", dependencies: ["ClaudrupleUsage"]),
+        // Reading and writing the desktop background is the one genuinely per-OS piece:
+        // NSWorkspace here, a per-desktop-environment shell-out on Linux, and
+        // SystemParametersInfoW on Windows.
+        .target(name: "ClaudrupleDesktop", dependencies: ["ClaudrupleRender"]),
         .executableTarget(name: "ClaudrupleLink"),
+        .executableTarget(
+            name: "claudrupled",
+            dependencies: [
+                "ClaudrupleDesktop", "ClaudrupleRender", "ClaudrupleUsage",
+                "ClaudrupleUsageClaude",
+            ]),
         .executableTarget(name: "claudruple", dependencies: ["ClaudrupleKit"]),
         .executableTarget(name: "ClaudrupleApp", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleKitTests", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleUsageTests", dependencies: ["ClaudrupleUsage"]),
+        .testTarget(
+            name: "ClaudrupleDesktopTests",
+            dependencies: ["ClaudrupleDesktop", "ClaudrupleRender"]),
         .testTarget(
             name: "ClaudrupleRenderTests",
             dependencies: ["ClaudrupleRender", "ClaudrupleUsage"]),
