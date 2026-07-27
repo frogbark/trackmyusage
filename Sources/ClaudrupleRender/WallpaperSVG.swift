@@ -148,7 +148,7 @@ public enum WallpaperSVG {
     private static func fullRail(_ rows: [Row], at generatedAt: Date) -> String {
         let pad: Double = 26
         let rowHeight: Double = 44
-        let width: Double = 360
+        let width: Double = 400
         let headerHeight: Double = 44
         let height = headerHeight + Double(max(rows.count, 1)) * rowHeight + pad
 
@@ -182,12 +182,24 @@ public enum WallpaperSVG {
     {
         let trackWidth: Double = 104
         let trackX = width - pad - trackWidth
+        let nameSize: Double = 20
+        let hasBar = row.utilization != nil
+        let valueSize: Double = hasBar ? 19 : 18
+        let valueRight = hasBar ? trackX - 14 : width - pad
+
+        // The value gets the space it needs and the name gets what is left. Reserving a
+        // fixed name column instead would either waste the row on short names or still
+        // collide on long ones, since the value's own width varies from "5%" to "$98,000".
+        let nameLimit = valueRight - estimateWidth(row.display, size: valueSize) - pad - 12
+
         var out = "<g class=\"row \(row.state.rawValue)\">"
-        out += label(row.name, x: pad, y: y, size: 20, ink: Ink.primary)
+        out += label(
+            truncate(row.name, size: nameSize, maxWidth: nameLimit),
+            x: pad, y: y, size: nameSize, ink: Ink.primary)
 
         guard let utilization = row.utilization else {
             out += label(
-                row.display, x: width - pad, y: y, size: 18,
+                row.display, x: valueRight, y: y, size: valueSize,
                 ink: row.state == .nodata ? Ink.absent : Ink.primary, anchor: "end")
             return out + "</g>"
         }
@@ -201,7 +213,8 @@ public enum WallpaperSVG {
             out += bar(class: "fill", x: trackX, y: y - 7, width: filled, ink: row.state.ink)
         }
         out += label(
-            row.display, x: trackX - 14, y: y, size: 19, ink: Ink.primary, anchor: "end")
+            row.display, x: valueRight, y: y, size: valueSize, ink: Ink.primary,
+            anchor: "end")
         return out + "</g>"
     }
 
@@ -334,6 +347,30 @@ public enum WallpaperSVG {
             return String(Int(value))
         }
         return String(format: "%.2f", value)
+    }
+
+    /// Roughly how wide a string will be.
+    ///
+    /// An approximation on purpose. Real advance widths would mean parsing the font, and
+    /// the only decision resting on this is whether a name needs an ellipsis — a job that
+    /// tolerates being a few percent out, and one that has to give the same answer on every
+    /// platform. A ratio does; a font query does not.
+    private static let glyphRatio: Double = 0.55
+
+    private static func estimateWidth(_ text: String, size: Double) -> Double {
+        Double(text.count) * size * glyphRatio
+    }
+
+    private static func truncate(_ text: String, size: Double, maxWidth: Double) -> String {
+        guard maxWidth > 0 else { return "…" }
+        guard estimateWidth(text, size: size) > maxWidth else { return text }
+        var characters = Array(text)
+        while !characters.isEmpty,
+            estimateWidth(String(characters) + "…", size: size) > maxWidth
+        {
+            characters.removeLast()
+        }
+        return characters.isEmpty ? "…" : String(characters) + "…"
     }
 
     /// Thousands separators, inserted by hand.

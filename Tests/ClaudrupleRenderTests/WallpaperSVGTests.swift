@@ -123,6 +123,29 @@ final class WallpaperSVGTests: XCTestCase {
         XCTAssertTrue(svg.contains("nodata"), "and marked structurally for styling")
     }
 
+    func testALongProviderNameIsTruncatedRatherThanRunningIntoItsValue() {
+        // Found by rendering rather than by asserting: "claude personal" overlapped its
+        // own percentage. Nothing in the document is malformed when this happens, so only
+        // looking at the pixels catches it — hence a test that pins the truncation.
+        let long = "claude personal work experiments"
+        let svg = WallpaperSVG.render(
+            [snapshot(long, 34)], density: .full,
+            canvas: .init(width: 2560, height: 1440), generatedAt: now)
+
+        XCTAssertFalse(svg.contains(long), "the full name cannot fit and must not be drawn")
+        XCTAssertTrue(svg.contains("…"), "truncation is visible rather than silent")
+        XCTAssertTrue(svg.contains("claude"), "the start of the name survives")
+    }
+
+    func testAShortNameIsLeftAlone() {
+        let svg = WallpaperSVG.render(
+            [snapshot("vercel", 34)], density: .full,
+            canvas: .init(width: 2560, height: 1440), generatedAt: now)
+
+        XCTAssertTrue(svg.contains(">vercel<"))
+        XCTAssertFalse(svg.contains("…"), "nothing is truncated that fits")
+    }
+
     func testAnUncappedProviderShowsItsValueRatherThanNoData() {
         // Stripe reports revenue, which has no cap at all. Labelling that "no data" is
         // wrong twice over: the reading is present, and having no limit is not the same
