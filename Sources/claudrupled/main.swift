@@ -33,11 +33,55 @@ func outputDirectory() -> URL {
 
 /// Everything we know right now, from every adapter that has one.
 ///
-/// Only Claude today. The other sixteen plug in here, and because they all arrive as
-/// `UsageSnapshot` nothing below this line changes when they do.
+/// Claude comes from local files and needs no credential. Everything else is a network
+/// call, and because they all arrive as `UsageSnapshot` nothing below this line cares
+/// which is which.
 func collect() -> [UsageSnapshot] {
-    ClaudeUsage.discover()
+    ClaudeUsage.discover() + external()
 }
+
+/// Snapshots from the configured network providers.
+///
+/// A provider is included when it needs no credential or has one stored. Fetching one that
+/// is not set up would spend a render cycle to draw "unauthorized" on someone's desktop.
+func external() -> [UsageSnapshot] {
+    let credentials = KeychainCredentials()
+    let providers = ProviderRegistry.all().filter { provider in
+        !provider.credentialSpec.required
+            || ((try? credentials.secret(for: provider.id)) ?? nil) != nil
+    }
+    guard !providers.isEmpty else { return [] }
+
+    let now = Date()
+    return runBlocking {
+        // Concurrently, deliberately. Serially, seventeen providers each allowed fifteen
+        // seconds could stall a render for four minutes; in parallel the slowest one sets
+        // the cost. `snapshot` never throws, so a failure occupies its row rather than
+        // taking the others down with it.
+        await withTaskGroup(of: UsageSnapshot.self) { group in
+            for provider in providers {
+                group.addTask { await provider.snapshot(credentials: credentials, now: now) }
+            }
+            var collected: [UsageSnapshot] = []
+            for await snapshot in group { collected.append(snapshot) }
+            return collected
+        }
+    }
+}
+
+/// The daemon is synchronous and the provider API is async. One bridge, in one place.
+func runBlocking<T: Sendable>(_ work: @escaping @Sendable () async -> T) -> T {
+    let semaphore = DispatchSemaphore(value: 0)
+    let box = Box<T>()
+    Task {
+        box.value = await work()
+        semaphore.signal()
+    }
+    semaphore.wait()
+    return box.value!
+}
+
+final class Box<T>: @unchecked Sendable { var value: T? }
 
 struct Rendered {
     let display: Display

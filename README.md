@@ -6,9 +6,9 @@ Each instance gets its own macOS app identity, its own profile, and its own plac
 Dock. A small broker makes sure sign-in and MCP OAuth callbacks reach the account that
 asked for them, instead of whichever instance happened to launch last.
 
-> **Status: early.** Instance creation, deep-link routing, config sync, usage tracking and
-> the menu bar app work and are in daily use. Multi-provider telemetry
-> ([`docs/roadmap.md`](docs/roadmap.md)) is still ahead.
+> **Status: early.** Instances, deep-link routing, config sync, usage tracking, steering,
+> the menu bar app and the usage wallpaper all work and are in daily use. Four of seventeen
+> provider integrations are built — see [`docs/roadmap.md`](docs/roadmap.md).
 
 Claudruple never bundles or redistributes Claude Desktop. It clones the copy already
 installed on your machine, leaves `app.asar` byte-for-byte untouched, and never handles
@@ -135,6 +135,41 @@ Claude Code token logs; this is the app's own accounting.
 
 `steer` names the account with headroom and stops there. `--yes` performs the switch.
 
+### Your usage, on the desktop
+
+```bash
+swift build -c release
+.build/release/claudrupled status    # what it would draw, and onto what
+.build/release/claudrupled render    # write the image, leave the desktop alone
+.build/release/claudrupled apply     # write it and set it as the wallpaper
+```
+
+Composites every account's binding limit onto the desktop background. The pipeline is
+snapshots → SVG → raster → desktop, and the whole visual design is a pure function from
+snapshots to SVG text — so a layout regression fails in `swift test` rather than appearing
+on your screen.
+
+Providers are fetched concurrently: seventeen adapters each allowed fifteen seconds would
+stall a serial render for four minutes, where in parallel the slowest one sets the cost. A
+provider is included when it needs no credential or has one stored.
+
+### Metered service accounts
+
+```bash
+.build/release/claudruple provider list           # what exists, what has a key
+.build/release/claudruple provider add stripe     # read from stdin, never a flag
+.build/release/claudruple provider probe stripe   # the real response, for writing a parser
+.build/release/claudruple provider check          # parsed snapshots
+```
+
+Built today: Claude (local files, no credential), ElevenLabs, GitHub, Stripe, Twilio. The
+other twelve are **absent rather than stubbed** — a parser written from a remembered API
+shape is indistinguishable from a correct one until it reports the wrong number. `probe`
+captures a real response so each adapter is written against fact.
+
+Credentials live in the login keychain only, `AfterFirstUnlockThisDeviceOnly`, one account
+per provider. Every adapter declares its minimum read-only scope in code.
+
 ### Scripts
 
 | Script | Purpose |
@@ -144,6 +179,7 @@ Claude Code token logs; this is the app's own accounting.
 | `sign-clone.sh` | Inside-out re-signing (used by the above) |
 | `build-link.sh` | Build the deep-link broker |
 | `install-link-agent.sh` | Register the broker as a login agent |
+| `build-app.sh` | Build the menu bar app |
 | `finish-repair.sh` | One-off: migrate a Parall install into Claudruple |
 | `remove-parall.sh` | One-off: remove Parall after verifying the migration |
 

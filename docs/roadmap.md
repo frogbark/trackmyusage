@@ -1,191 +1,197 @@
 # Roadmap
 
-Three pillars over one shared account model. That model is what keeps this a single
-product rather than three tools.
+## Where things are
 
 ```
-ClaudrupleKit (Swift package, no UI, unit-tested)
-├── Accounts     — instance identity, org UUIDs, keychain refs
-├── Instances    — Clone · Stamp · Sign · Register · Migrate · Launch · Update   [Phase 0 ✓]
-├── Usage        — providers → normalized UsageSnapshot → history → alerts
-└── Sync         — manifest parse · diff · plan · apply, with scope safety
+ClaudrupleKit           instances · sync · Claude's local usage · steering
+ClaudrupleUsage         the provider SDK: HTTP seam, snapshots, credentials, adapters
+ClaudrupleUsageClaude   Claude's local history as provider snapshots
+ClaudrupleRender        usage → SVG → raster
+ClaudrupleDesktop       reading and writing the desktop background
 
-claudruple (CLI)          — thin wrapper over the kit
-Claudruple.app (SwiftUI)  — window + always-visible menu bar gauge
-Claudruple Link.app       — deep-link broker                                     [Phase 0 ✓]
+claudruple              CLI: instances, sync, usage, steer, providers
+claudrupled             renders and applies the usage wallpaper
+Claudruple.app          menu bar gauge and instance window
+Claudruple Link.app     deep-link broker
 ```
 
-## Phase 0 — Instances and routing ✅
+| | State |
+|---|---|
+| Instances and deep-link routing | **working** |
+| Config sync — capture, plan, apply | **working** |
+| Claude usage, forecasting, steering | **working** |
+| Menu bar app | **working** |
+| Usage wallpaper | **working** |
+| Provider adapters | 4 of 17 |
+| Codex Desktop | assessed, not started |
+| Release | not started |
 
-Done and in use. See [`findings.md`](findings.md).
+---
 
-## Phase 1 — Instances + Sync
+## Instances and routing ✅
 
-Port the shell scripts to `ClaudrupleKit`, add the GUI, and build config sync.
+A real bundle per instance with its own `CFBundleIdentifier`, an in-bundle shim injecting
+`--user-data-dir`, and a broker that owns `claude://` and re-claims it within about a second
+whenever an instance grabs it at launch. See [`findings.md`](findings.md) for how each was
+determined, including the approaches that failed first.
 
-Sync uses a declarative, git-committable manifest — reproducible, reviewable, survives a
-machine rebuild, and shareable, which is the point:
+## Config sync ✅
 
-```yaml
-version: 1
-instances:
-  - name: Work
-    extensions: [ant.dir.ant.anthropic.filesystem, ant.dir.gh.stripe.stripe]
-    skills:     [superpowers, dataviz]
-    plugins:    [vercel, posthog]
-  - name: Personal
-    inherits: Work
-    extensions: { add: [ant.dir.gh.blender.blender-mcp] }
-```
+A declarative, git-committable manifest. `capture` writes one from an instance, `plan` shows
+the difference and changes nothing, `apply` converges.
 
-`sync plan` prints the diff and changes nothing; `sync apply` converges; `sync capture`
-generates a manifest from an existing instance. The environment/account/machine scope split
-in [`findings.md`](findings.md#7-config-surfaces-and-which-are-safe-to-sync) is enforced in
-the engine, not left to the manifest author.
+Three rules the engine enforces rather than documents:
 
-Also: watch the primary's `CFBundleShortVersionString` and offer to re-clone instances when
-Claude updates (profiles untouched), and generate a tinted icon per instance so the Dock and
-Cmd-Tab are distinguishable.
+- **Account-scoped configuration never crosses accounts.** `*ByAccount` grants,
+  `oauth:tokenCache*` and org-suffixed keys are refused and reported.
+- **Removal needs `--prune` on the command line**, even when the manifest says
+  `policy: exact` — a manifest from someone else's repo must not delete your extensions.
+  `keep:` exempts deliberate per-instance extras.
+- **Extension settings are not copied.** They hold `api_key` and `allowed_directories`;
+  sync moves tooling between accounts, not the authority to use it.
 
-**Open question:** whether the `-3p` managed-settings path is per-instance or global for a
-clone. Not needed for Phase 0, but it determines how managed settings can be applied later.
+**Still open:** re-cloning instances when Claude updates, a tinted icon per instance, and
+instance management in the GUI rather than only the CLI.
 
-## Phase 2 — Usage and steering
+## Usage and steering ✅
 
-The calibration gate is closed: the field map, the limit list and the `xu` constant were read
-out of the app bundle directly, so nothing here rests on inference. Parsing, forecasting and
-the steering decision engine are built and covered by tests; the menu bar surface and
-notifications wait on the GUI.
+The calibration question is settled from source: the field map, the limit list and the `xu`
+constant were read out of the app bundle, so nothing rests on inference. Utilisation values
+are the app's own accounting, not an estimate reconstructed from token logs.
+
+Forecasting is reset-aware — utilisation only rises within a window, so a fall means the
+window rolled and a slope fitted across that boundary would hide an imminent exhaustion.
+Rate and staleness windows scale to each metric's own period.
+
+Steering names the account with headroom and stops there; switching is offered, never
+performed unprompted.
 
 **Not implemented, deliberately:** switching the active Claude Code credential. The keychain
 holds `Claude Code-credentials` alongside `Claude Code-credentials-<hash>` entries, but how
 the CLI selects among them is not established, and writing keychain items on a guess risks
-locking someone out of their own tooling. It needs its own investigation before any code.
+locking someone out of their own tooling.
 
-- Sampler merges `plan-usage-history.json` per instance by org UUID into SQLite, backfilling
-  existing history so the first launch already has a chart.
-- Menu bar gauge — always-visible 5-hour and weekly figures per account.
-- Burn-rate forecast, native notifications at configurable thresholds.
-- **Steering:** active routing with confirmation required by default — name the account with
-  headroom, offer one click to switch to it or to swap the active Claude Code credential
-  (the keychain already keys these by account hash: `Claude Code-credentials-<hash>`). An
-  opt-in Auto-steer mode does it without prompting. In-flight conversations are never moved.
+## Usage wallpaper ✅
 
-Zero credentials, works offline. This is the first-run hook: real usage across every account
-within seconds of launch.
+`claudrupled` composites every provider's binding limit onto the desktop background.
 
-## Phase 3 — Multi-provider telemetry
+The pipeline is snapshots → SVG → raster → desktop, and the split is what makes it testable:
+the whole visual design is a pure function from snapshots to SVG text, so a layout
+regression fails in `swift test` rather than appearing on someone's screen. Only the last
+step is platform-specific.
 
-**In progress.** The SDK, the credential store and one verified adapter are built; the
-remaining fifteen are deliberately absent rather than stubbed.
+Providers are fetched concurrently. Serially, seventeen adapters each allowed fifteen
+seconds could stall a render for four minutes; in parallel the slowest one sets the cost.
+A provider is included when it needs no credential or has one stored — fetching an
+unconfigured one would spend a render cycle drawing "unauthorized" on someone's desktop.
 
-### Why only one adapter so far
+**Still open:** running it on a schedule rather than on demand, and per-display density
+selection.
 
-A parser written from a remembered API shape is indistinguishable from a correct one until
-it reports the wrong number, and a usage dashboard that is quietly wrong is worse than one
-that is honestly incomplete. ElevenLabs shipped because its response shape was verified
-against current documentation. OpenAI's reference is behind a 403 and GitHub's usage
-endpoint was not in the page that documents its billing API, so neither was written.
+---
 
-`claudruple provider probe <id>` exists to close that gap: it performs the real call and
-prints the raw body, so a parser can be written against fact and the response saved as a
-fixture. That is also the mechanism that lets contributors add a provider without anyone
-else needing an account with them.
+## Provider adapters — in progress
 
-### The adapter contract
+Four of seventeen. The rest are absent rather than stubbed, and that is the whole policy: a
+parser written from a remembered API shape is indistinguishable from a correct one until it
+reports the wrong number, and a usage dashboard that is quietly wrong is worse than one that
+is honestly incomplete.
+
+| Built | Verified how |
+|---|---|
+| Claude | local files; field map read from the app bundle |
+| ElevenLabs | response shape confirmed against current docs |
+| GitHub | `/rate_limit` confirmed against a live call; billing shape confirmed against docs |
+| Stripe | confirmed against current docs, including minor-unit amounts |
+| Twilio | confirmed against current docs, including string-typed usage fields |
+
+| Blocked | Why |
+|---|---|
+| OpenAI | API reference returns 403; the published OpenAPI spec omits the costs endpoint |
+| Vercel | `/v2/user` documents `billing` as nullable with no fields |
+| Sentry, PostHog | shapes documented; not yet written |
+| Firecrawl, Resend, Supabase, Modal, Inngest | thinner data expected |
+| Hostinger, Higgsfield, OpenArt | no confirmed usage API; may end up manual entry |
+
+`claudruple provider probe <id>` closes the gap: it performs the real call and prints what
+came back, so a parser gets written against fact and the response saved as a fixture. That
+is also what lets a contributor add a provider without anyone else holding an account.
+
+### The contract
 
 ```swift
-public protocol UsageProviderAdapter: Sendable {
-    static var id: String { get }
-    static var displayName: String { get }
-    static var credentialSpec: CredentialSpec { get }
-    static var capabilities: ProviderCapabilities { get }
-
-    func request(credential: String) throws -> URLRequest
-    func parse(_ data: Data, now: Date) throws -> ProviderSnapshot
+public protocol UsageProvider: Sendable {
+    var id: String { get }
+    var credentialSpec: CredentialSpec { get }
+    func fetch(secret: String?, now: Date) async throws -> ProviderReading
 }
 ```
 
-Request-building and parsing are separate on purpose. Parsing is where the risk and the
-churn live, and keeping it a pure function of `Data` means every adapter is verifiable
-offline against a recorded fixture.
+Adapters implement `fetch` and nothing else. Turning a failure into a snapshot, checking for
+a missing credential and stamping the identity happen once in a protocol extension, so
+seventeen adapters cannot disagree about what an outage looks like. `snapshot()` never
+throws — one provider being down is the normal state of at least one of seventeen at any
+moment, and propagating it would let a single timeout take out the whole render.
 
-Everything normalises to one shape so a single view and a single alerting engine can serve
-all of them. `utilization` is *derived* from value and limit, never reported: uncapped spend
-yields nil rather than a percentage invented against a budget the user never set, and only
-capped metrics can be a snapshot's binding constraint — an uncapped $9,999 must not outrank
-a quota at 95%.
+`HTTPClient` is deliberately GET-only: an adapter that could POST would be an adapter that
+could be made to change something, and the entire credential story is that a leaked token
+cannot. `FixtureHTTPClient` replays recorded responses and logs the requests, so a test can
+assert the URL and headers an adapter used, and an unrecorded URL throws rather than
+silently succeeding — which catches an adapter calling the wrong endpoint.
 
-### Credentials
-
-Keychain only, one service per provider, `AfterFirstUnlockThisDeviceOnly` and never synced.
-Keys are read from stdin rather than a flag, because an argument lands in shell history and
-in the process list. Every adapter declares the minimum scope that makes it work, in code,
-so the setup flow and the docs cannot drift apart.
-
-### Remaining, in order of API quality
-
-| Tier | Providers |
-|---|---|
-| Verified | ElevenLabs ✅ |
-| Expected to be straightforward | OpenAI, GitHub, Vercel, Twilio, Sentry, PostHog |
-| Workable, thinner data | Firecrawl, Resend, Stripe (revenue, separate axis), Supabase, Modal, Inngest |
-| Unknown until probed | Hostinger, Higgsfield, OpenArt — may end up manual entry |
+`utilization` is derived from value and limit, never reported. Uncapped spend yields nil
+rather than a percentage invented against a budget nobody set, and only capped metrics can
+be a snapshot's binding constraint — an uncapped $9,999 must not outrank a quota at 95%.
 
 **API-only, never scrape.** Where no usage API exists, report unavailable or accept manual
 entry. A **renewal calendar** needs no usage API at all and is probably the broadest-appeal
-feature in this phase.
+feature left in this phase.
 
-## Phase 5 — Codex Desktop
+### Credentials
 
-Same problem, second app. Assessed against the real install rather than assumed —
-`/Applications/ChatGPT.app` **is** Codex Desktop (bundle id `com.openai.codex`,
-version 26.721.41059).
+Login keychain only — one service, one account per provider,
+`AfterFirstUnlockThisDeviceOnly`. `AfterFirstUnlock` so a launch agent can read it on a
+booted-but-not-logged-in machine; `ThisDeviceOnly` because a provider API key has no
+business replicating to iCloud Keychain. Secrets are read from stdin rather than a flag,
+since an argument lands in shell history and the process list. Every adapter declares its
+minimum read-only scope in code, so the setup flow and the docs cannot drift apart.
 
-### What transfers
+---
 
-It is Electron, so the shape of the solution carries over: a real bundle per instance with
-its own `CFBundleIdentifier`, `--user-data-dir` for the profile, quarantine cleared, and
-re-signed inside-out. It calls `setAsDefaultProtocolClient` exactly like Claude, and claims
-`codex://`, so the same last-launch-wins tug-of-war applies and the broker generalises —
-it already resolves handlers by scheme, and needs only a second scheme registered.
+## Codex Desktop — assessed, not started
 
-### What does not
+`/Applications/ChatGPT.app` **is** Codex Desktop (bundle id `com.openai.codex`, version
+26.721.41059).
 
-**It is sandboxed**, and that changes the cost of cloning. Its entitlements include
-`com.apple.security.app-sandbox`, `com.apple.security.application-groups`,
-`keychain-access-groups` and `com.apple.developer.aps-environment` — all Team-ID-bound and
-unclaimable by a re-signed clone. Claude loses only WebAuthn and hardware-key login this
-way; a Codex clone would additionally lose its app group, its sandbox container identity
-and push notifications. Whether the app still functions usefully after that is the first
-thing to establish, and it may be the finding that stops this.
+**Transfers:** it is Electron, claims `codex://`, and calls `setAsDefaultProtocolClient` on
+launch — the same last-launch-wins tug-of-war. The broker already resolves handlers by
+scheme and needs only a second one registered.
 
-It also ships **Sparkle**, so clones go stale and self-update attempts may fail signature
-checks against a re-signed bundle.
+**Does not:** it is sandboxed. Its entitlements include `app-sandbox`,
+`application-groups`, `keychain-access-groups` and `aps-environment`, all Team-ID-bound and
+unclaimable by a re-signed clone. Claude loses only WebAuthn and hardware-key login that
+way; a Codex clone would additionally lose its app group, its container identity and push.
+Whether it still runs usefully after that is the first thing to establish, and may be what
+stops this. It also ships Sparkle, so clones go stale and self-update may fail signature
+checks.
 
-### Open questions, each cheap to answer
+**Open questions, each cheap to answer:**
 
-1. **Where does its userData name come from?** `CFBundleName` is `ChatGPT`, the framework is
-   `Codex Framework.framework`, and the profile lands at `~/Library/Application
-   Support/Codex` — three different names. No `app.setName("…")` literal was found, so the
-   mechanism differs from Claude's and needs a probe before `--user-data-dir` is trusted.
-2. **Where are its Electron helpers?** `Contents/Frameworks` holds only `Codex
-   Framework.framework` and `Sparkle.framework` — no `<Name> Helper.app`. Claude aborted at
-   startup when `CFBundleName` moved away from its helpers; whatever Codex does instead
-   determines whether that trap exists here at all.
-3. **Does the sandbox survive ad-hoc re-signing**, and does the app still start without its
-   app group?
+1. Where does its userData name come from? `CFBundleName` is `ChatGPT`, the framework is
+   `Codex Framework.framework`, the profile lands at `~/Library/Application Support/Codex`
+   — three names that disagree, with no `app.setName("…")` literal found.
+2. Where are its Electron helpers? `Contents/Frameworks` holds only the framework and
+   Sparkle — no `<Name> Helper.app`. Claude aborted at startup when `CFBundleName` moved
+   away from its helpers; whatever Codex does instead decides whether that trap exists here.
+3. Does the sandbox survive ad-hoc re-signing, and does the app start without its app group?
 
-Sequenced after the provider work: it shares the instance engine, and the engine should
-settle before it grows a second app's worth of special cases.
+## Release — not started
 
-## Phase 4 — Release
-
-Developer ID signed and notarized, built in CI; buildable from source. Homebrew cask for the
-app, `brew install claudruple` for the CLI.
+Developer ID signed and notarised, built in CI, buildable from source. Homebrew cask for the
+apps, `brew install claudruple` for the CLI.
 
 Not the Mac App Store: the sandbox forbids `codesign`, cannot clear quarantine on files it
 writes, and cannot manage LaunchServices — the exact ceiling that breaks existing tools.
 
-Credit prior art (ccusage, Claude Code Usage Monitor, ccflare, MCP Config Sync) and offer
+Credit prior art — ccusage, Claude Code Usage Monitor, ccflare, MCP Config Sync — and offer
 interop rather than competing on their ground.
