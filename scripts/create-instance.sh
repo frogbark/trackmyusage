@@ -77,7 +77,7 @@ mv "$APP/Contents/MacOS/Claude" "$APP/Contents/MacOS/$REALBIN"
 mkdir -p "$UDD"
 clang -arch arm64 -O2 -Wall -Wextra \
   -DREAL_BINARY="\"$REALBIN\"" -DUSER_DATA_DIR="\"$UDD\"" \
-  -o "$APP/Contents/MacOS/$NAME" "$ROOT/src/launcher/launcher.c"
+  -o "$APP/Contents/MacOS/$NAME" "$ROOT/native/launcher/launcher.c"
 ok "data dir: $UDD"
 
 say "Signing"

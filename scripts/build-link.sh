@@ -18,10 +18,11 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 
 echo "==> compiling"
-swiftc -O -swift-version 5 \
-  -target arm64-apple-macos13.0 \
-  -o "$APP/Contents/MacOS/$NAME" \
-  "$ROOT/src/link/main.swift"
+# Built through SPM so the broker shares the package's toolchain settings and can depend
+# on ClaudrupleKit as it grows. The .app bundle around it is still assembled by hand —
+# a bundle is all this needs, and an Xcode project would be more to maintain than it earns.
+( cd "$ROOT" && swift build -c release --product ClaudrupleLink )
+cp "$ROOT/.build/release/ClaudrupleLink" "$APP/Contents/MacOS/$NAME"
 
 echo "==> writing Info.plist"
 cat > "$APP/Contents/Info.plist" <<PLIST
