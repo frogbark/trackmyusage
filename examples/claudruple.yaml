@@ -1,0 +1,38 @@
+# claudruple.yaml — declarative Claude Desktop instance configuration.
+#
+#   claudruple plan  <this file>            show what would change
+#   claudruple apply <this file>            install what is missing
+#   claudruple apply <this file> --prune    also remove unmanaged extensions
+#
+# policy: additive (default) installs but never removes.
+# policy: exact converges exactly — but removal still requires --prune, so a
+# manifest from someone else's repo can never delete your extensions on its own.
+# keep: names extensions that survive exact.
+version: 1
+instances:
+  - name: Claude
+    policy: additive
+    extensions:
+      - ant.dir.ant.anthropic.chrome-control
+      - ant.dir.ant.anthropic.filesystem
+      - ant.dir.ant.anthropic.imessage
+      - ant.dir.ant.anthropic.ms_office_word
+      - ant.dir.ant.anthropic.notes
+      - ant.dir.ant.figma.figma
+      - ant.dir.gh.adobe.react-aria
+      - ant.dir.gh.anthropic.pdf-server-mcp
+      - ant.dir.gh.elevenlabs.agents-mcp-app
+      - ant.dir.gh.elevenlabs.elevenlabs-player
+      - ant.dir.gh.jpisnice.shadcn-ui-mcp
+      - ant.dir.gh.k6l3.osascript
+      - ant.dir.gh.silverstein.pdf-filler-simple
+      - ant.dir.gh.stripe.stripe
+      - ant.dir.gh.wonderwhy-er.desktopcommandermcp
+    keep: []
+
+  - name: Claude Two
+    inherits: Claude
+    policy: exact
+    extensions: []
+    keep:
+      - ant.dir.gh.blender.blender-mcp

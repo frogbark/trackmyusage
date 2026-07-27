@@ -6,9 +6,9 @@ Each instance gets its own macOS app identity, its own profile, and its own plac
 Dock. A small broker makes sure sign-in and MCP OAuth callbacks reach the account that
 asked for them, instead of whichever instance happened to launch last.
 
-> **Status: early.** Phase 0 (instance creation + deep-link routing) works and is in daily
-> use. The usage dashboard, config sync, and GUI described in [`docs/roadmap.md`](docs/roadmap.md)
-> are not built yet.
+> **Status: early.** Instance creation, deep-link routing, and `sync plan` work and are in
+> daily use. `sync apply` is not implemented yet — `plan` is read-only and safe. The usage
+> dashboard and GUI in [`docs/roadmap.md`](docs/roadmap.md) are still ahead.
 
 Claudruple never bundles or redistributes Claude Desktop. It clones the copy already
 installed on your machine, leaves `app.asar` byte-for-byte untouched, and never handles
@@ -72,6 +72,27 @@ Then sign into the new window with your second account. Remove one with:
 ./scripts/remove-instance.sh "Work"              # keeps the profile
 ./scripts/remove-instance.sh "Work" --purge-data # removes it too
 ```
+
+### Keeping instances in step
+
+```bash
+swift build -c release
+.build/release/claudruple instances                    # what is installed
+.build/release/claudruple capture "Claude" > claudruple.yaml
+.build/release/claudruple plan claudruple.yaml         # read-only: shows what would change
+.build/release/claudruple plan claudruple.yaml --prune # include removals
+```
+
+The manifest is meant to be committed. See [`examples/claudruple.yaml`](examples/claudruple.yaml).
+
+Two rules the engine enforces rather than documents:
+
+- **Account-scoped config never syncs.** `*ByAccount` permission grants, `oauth:tokenCache*`,
+  and org-suffixed keys are refused and reported, not copied. Carrying a permission grant
+  between accounts is a security bug, not a convenience.
+- **Removal requires `--prune` on the command line**, even when the manifest says
+  `policy: exact`. Manifests get shared; a file someone else wrote must not be able to
+  delete your extensions. `keep:` exempts deliberate per-instance extras.
 
 ### Scripts
 
