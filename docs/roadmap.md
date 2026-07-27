@@ -136,6 +136,49 @@ so the setup flow and the docs cannot drift apart.
 entry. A **renewal calendar** needs no usage API at all and is probably the broadest-appeal
 feature in this phase.
 
+## Phase 5 — Codex Desktop
+
+Same problem, second app. Assessed against the real install rather than assumed —
+`/Applications/ChatGPT.app` **is** Codex Desktop (bundle id `com.openai.codex`,
+version 26.721.41059).
+
+### What transfers
+
+It is Electron, so the shape of the solution carries over: a real bundle per instance with
+its own `CFBundleIdentifier`, `--user-data-dir` for the profile, quarantine cleared, and
+re-signed inside-out. It calls `setAsDefaultProtocolClient` exactly like Claude, and claims
+`codex://`, so the same last-launch-wins tug-of-war applies and the broker generalises —
+it already resolves handlers by scheme, and needs only a second scheme registered.
+
+### What does not
+
+**It is sandboxed**, and that changes the cost of cloning. Its entitlements include
+`com.apple.security.app-sandbox`, `com.apple.security.application-groups`,
+`keychain-access-groups` and `com.apple.developer.aps-environment` — all Team-ID-bound and
+unclaimable by a re-signed clone. Claude loses only WebAuthn and hardware-key login this
+way; a Codex clone would additionally lose its app group, its sandbox container identity
+and push notifications. Whether the app still functions usefully after that is the first
+thing to establish, and it may be the finding that stops this.
+
+It also ships **Sparkle**, so clones go stale and self-update attempts may fail signature
+checks against a re-signed bundle.
+
+### Open questions, each cheap to answer
+
+1. **Where does its userData name come from?** `CFBundleName` is `ChatGPT`, the framework is
+   `Codex Framework.framework`, and the profile lands at `~/Library/Application
+   Support/Codex` — three different names. No `app.setName("…")` literal was found, so the
+   mechanism differs from Claude's and needs a probe before `--user-data-dir` is trusted.
+2. **Where are its Electron helpers?** `Contents/Frameworks` holds only `Codex
+   Framework.framework` and `Sparkle.framework` — no `<Name> Helper.app`. Claude aborted at
+   startup when `CFBundleName` moved away from its helpers; whatever Codex does instead
+   determines whether that trap exists here at all.
+3. **Does the sandbox survive ad-hoc re-signing**, and does the app still start without its
+   app group?
+
+Sequenced after the provider work: it shares the instance engine, and the engine should
+settle before it grows a second app's worth of special cases.
+
 ## Phase 4 — Release
 
 Developer ID signed and notarized, built in CI; buildable from source. Homebrew cask for the
