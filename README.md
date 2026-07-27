@@ -6,9 +6,9 @@ Each instance gets its own macOS app identity, its own profile, and its own plac
 Dock. A small broker makes sure sign-in and MCP OAuth callbacks reach the account that
 asked for them, instead of whichever instance happened to launch last.
 
-> **Status: early.** Instance creation, deep-link routing, and `sync plan` work and are in
-> daily use. `sync apply` is not implemented yet — `plan` is read-only and safe. The usage
-> dashboard and GUI in [`docs/roadmap.md`](docs/roadmap.md) are still ahead.
+> **Status: early.** Instance creation, deep-link routing, and config sync (`plan` and
+> `apply`) work and are in daily use. The usage dashboard and GUI in
+> [`docs/roadmap.md`](docs/roadmap.md) are still ahead.
 
 Claudruple never bundles or redistributes Claude Desktop. It clones the copy already
 installed on your machine, leaves `app.asar` byte-for-byte untouched, and never handles
@@ -80,8 +80,13 @@ swift build -c release
 .build/release/claudruple instances                    # what is installed
 .build/release/claudruple capture "Claude" > claudruple.yaml
 .build/release/claudruple plan claudruple.yaml         # read-only: shows what would change
-.build/release/claudruple plan claudruple.yaml --prune # include removals
+.build/release/claudruple apply claudruple.yaml        # install what is missing
+.build/release/claudruple apply claudruple.yaml --prune # also remove unmanaged extensions
 ```
+
+Payloads are copied from an instance that already has them (`--from` to choose). On APFS
+this is a clonefile copy: 15 extensions totalling 700 MB apply in ~2 seconds and cost about
+54 MB of real disk. A snapshot is taken before the first write.
 
 The manifest is meant to be committed. See [`examples/claudruple.yaml`](examples/claudruple.yaml).
 
@@ -93,6 +98,12 @@ Two rules the engine enforces rather than documents:
 - **Removal requires `--prune` on the command line**, even when the manifest says
   `policy: exact`. Manifests get shared; a file someone else wrote must not be able to
   delete your extensions. `keep:` exempts deliberate per-instance extras.
+- **Extension settings are not copied.** `Claude Extensions Settings/*.json` holds things
+  like `api_key` and `allowed_directories` — a credential and a filesystem grant. Sync moves
+  tooling between accounts, not the authority to use it, so extensions arrive installed but
+  unconfigured. `--with-settings` overrides this and copies the credentials too.
+- **`apply` refuses to write to a running instance.** Claude rewrites its extension registry
+  on exit and would discard the changes.
 
 ### Scripts
 
