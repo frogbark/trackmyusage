@@ -11,6 +11,7 @@ let package = Package(
     products: [
         .library(name: "ClaudrupleKit", targets: ["ClaudrupleKit"]),
         .library(name: "ClaudrupleUsage", targets: ["ClaudrupleUsage"]),
+        .library(name: "ClaudrupleRender", targets: ["ClaudrupleRender"]),
         .executable(name: "ClaudrupleLink", targets: ["ClaudrupleLink"]),
         .executable(name: "claudruple", targets: ["claudruple"]),
         .executable(name: "ClaudrupleApp", targets: ["ClaudrupleApp"]),
@@ -33,11 +34,18 @@ let package = Package(
         .target(
             name: "ClaudrupleUsageClaude",
             dependencies: ["ClaudrupleKit", "ClaudrupleUsage"]),
+        // Text in, text out. Producing SVG rather than pixels keeps the whole visual
+        // design a pure function that diffs in a golden-file test, and leaves rasterising
+        // as the only part that needs a platform.
+        .target(name: "ClaudrupleRender", dependencies: ["ClaudrupleUsage"]),
         .executableTarget(name: "ClaudrupleLink"),
         .executableTarget(name: "claudruple", dependencies: ["ClaudrupleKit"]),
         .executableTarget(name: "ClaudrupleApp", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleKitTests", dependencies: ["ClaudrupleKit"]),
         .testTarget(name: "ClaudrupleUsageTests", dependencies: ["ClaudrupleUsage"]),
+        .testTarget(
+            name: "ClaudrupleRenderTests",
+            dependencies: ["ClaudrupleRender", "ClaudrupleUsage"]),
         .testTarget(
             name: "ClaudrupleUsageClaudeTests",
             dependencies: ["ClaudrupleUsageClaude", "ClaudrupleKit", "ClaudrupleUsage"]),
