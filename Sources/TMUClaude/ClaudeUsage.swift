@@ -1,6 +1,6 @@
-import ClaudrupleKit
-import ClaudrupleUsage
 import Foundation
+import TMUKit
+import TMUProviders
 
 /// Maps Claude Desktop's own accounting onto the provider-neutral shape.
 ///

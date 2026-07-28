@@ -1,15 +1,15 @@
 #!/bin/bash
-# Install Claudruple Link as a login agent.
+# Install TrackMyUsage Link as a login agent.
 #
 # The broker must be running before any callback arrives, and must come back after a
 # reboot — otherwise the first sign-in after restarting lands wherever LaunchServices
 # happens to point. KeepAlive also restarts it if it ever dies mid-session.
 set -euo pipefail
 
-LABEL="com.claudruple.link"
-APP="${APP:-/Applications/Claudruple/Claudruple Link.app}"
+LABEL="com.trackmyusage.link"
+APP="${APP:-/Applications/Claudruple/TrackMyUsage Link.app}"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-BIN="$APP/Contents/MacOS/Claudruple Link"
+BIN="$APP/Contents/MacOS/TrackMyUsage Link"
 
 [ -x "$BIN" ] || { echo "error: not found: $BIN" >&2; exit 1; }
 
@@ -25,12 +25,12 @@ cat > "$PLIST" <<PLI
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
     <key>ProcessType</key><string>Background</string>
-    <key>StandardErrorPath</key><string>$HOME/Library/Logs/Claudruple/link.stderr.log</string>
+    <key>StandardErrorPath</key><string>$HOME/Library/Logs/TrackMyUsage/link.stderr.log</string>
 </dict>
 </plist>
 PLI
 
-mkdir -p "$HOME/Library/Logs/Claudruple"
+mkdir -p "$HOME/Library/Logs/TrackMyUsage"
 
 # bootout is expected to fail when nothing is loaded yet; that is not an error.
 launchctl bootout "gui/$UID/$LABEL" 2>/dev/null || true

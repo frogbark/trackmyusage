@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleUsage
+@testable import TMUProviders
 
 /// Twilio. `count` and `usage` arrive as strings while `price` is a number — the detail
 /// that would otherwise report zero usage against a real bill.

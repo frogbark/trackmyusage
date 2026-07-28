@@ -1,13 +1,13 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 final class InstanceLocatorTests: XCTestCase {
 
     private let home = URL(fileURLWithPath: "/Users/example")
 
     func testPrimaryUsesTheStockProfilePath() {
-        // The stock app is never managed by Claudruple, and its profile stays where
+        // The stock app is never managed by TrackMyUsage, and its profile stays where
         // Claude Desktop puts it.
         let url = InstanceLocator.profileURL(
             bundleID: "com.anthropic.claudefordesktop", displayName: "Claude", home: home)
@@ -15,7 +15,7 @@ final class InstanceLocatorTests: XCTestCase {
         XCTAssertEqual(url.path, "/Users/example/Library/Application Support/Claude")
     }
 
-    func testClonesAreNamespacedUnderClaudruple() {
+    func testClonesAreNamespacedUnderTrackMyUsage() {
         let url = InstanceLocator.profileURL(
             bundleID: "com.anthropic.claudefordesktop.claudruple.two",
             displayName: "Claude Two", home: home)
@@ -39,7 +39,7 @@ final class InstanceLocatorTests: XCTestCase {
     }
 
     func testBrokerIsNotAnInstance() {
-        XCTAssertFalse(InstanceLocator.isClaudeInstance(bundleID: "com.claudruple.link"))
+        XCTAssertFalse(InstanceLocator.isClaudeInstance(bundleID: "com.trackmyusage.link"))
     }
 
     func testHelperBundlesAreNotInstances() {

@@ -1,8 +1,8 @@
-import ClaudrupleKit
 import SwiftUI
+import TMUKit
 
 @main
-struct ClaudrupleApp: App {
+struct TrackMyUsageApp: App {
     @StateObject private var store = UsageStore()
 
     var body: some Scene {
@@ -20,7 +20,7 @@ struct ClaudrupleApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Claudruple", id: "main") {
+        Window("TrackMyUsage", id: "main") {
             InstancesView(store: store)
         }
         .defaultSize(width: 560, height: 420)

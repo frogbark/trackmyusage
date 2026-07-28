@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Remove Parall once both Claudruple instances are confirmed working.
+# Remove Parall once both TrackMyUsage instances are confirmed working.
 #
 # Deliberately a separate script from finish-repair.sh: the migrated data is the only
 # copy of account 2's extensions and sessions outside the backups, so nothing is deleted
@@ -26,13 +26,13 @@ ok()  { printf '    \033[32m✓\033[0m %s\n' "$1"; }
 
 say "Safety check"
 if ! pgrep -f "Claude Two Bin" >/dev/null 2>&1; then
-  echo "    The Claudruple instance is not running." >&2
+  echo "    The TrackMyUsage instance is not running." >&2
   echo "    Start it and confirm account 2 loads before removing the migrated source." >&2
   exit 1
 fi
-ok "Claudruple instance is running"
+ok "TrackMyUsage instance is running"
 
-ext=$(ls -1 "$SUPPORT/Claudruple/Claude Two/Claude Extensions" 2>/dev/null | wc -l | tr -d ' ')
+ext=$(ls -1 "$SUPPORT/TrackMyUsage/Claude Two/Claude Extensions" 2>/dev/null | wc -l | tr -d ' ')
 [ "$ext" -gt 0 ] || { echo "    No extensions in the migrated profile — aborting." >&2; exit 1; }
 ok "migrated profile holds $ext extensions"
 
@@ -45,7 +45,7 @@ read -r reply
 [[ "$reply" =~ ^[Yy]$ ]] || { echo "aborted"; exit 0; }
 
 say "Final backup"
-BK="$HOME/Claudruple-Backups/parall-removal-$(date +%Y%m%d-%H%M%S)"
+BK="$HOME/TrackMyUsage-Backups/parall-removal-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BK"
 [ -d "$SUPPORT/Parall" ] && cp -Rc "$SUPPORT/Parall" "$BK/Parall-data"
 ok "backed up to $BK"
@@ -64,10 +64,10 @@ done
 say "Rebuilding the LaunchServices database"
 "$LSREG" -kill -r -domain local -domain system -domain user >/dev/null 2>&1 || true
 for a in "/Applications/Claude.app" "/Applications/Claudruple/Claude Two.app" \
-         "/Applications/Claudruple/Claudruple Link.app"; do
+         "/Applications/Claudruple/TrackMyUsage Link.app"; do
   "$LSREG" -f "$a" 2>/dev/null || true
 done
-launchctl kickstart -k "gui/$UID/com.claudruple.link" 2>/dev/null || true
+launchctl kickstart -k "gui/$UID/com.trackmyusage.link" 2>/dev/null || true
 ok "rebuilt"
 
 printf '\n\033[1mParall removed.\033[0m Backup retained at %s\n\n' "$BK"

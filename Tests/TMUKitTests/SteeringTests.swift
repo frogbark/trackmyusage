@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 /// Deciding which account to work in.
 ///

@@ -1,5 +1,5 @@
-import ClaudrupleKit
 import SwiftUI
+import TMUKit
 
 /// The main window: every instance, what it holds, and what it is using.
 struct InstancesView: View {
@@ -13,7 +13,7 @@ struct InstancesView: View {
                         .font(.largeTitle).foregroundStyle(.secondary)
                     Text("No instances found").font(.headline)
                     Text(
-                        "Create one with `claudruple`, or check that Claude Desktop is "
+                        "Create one with `tmu`, or check that Claude Desktop is "
                             + "installed at /Applications/Claude.app."
                     )
                     .font(.callout).foregroundStyle(.secondary)

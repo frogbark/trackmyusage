@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 /// The always-visible string, and the rule for when to interrupt someone.
 final class MenuBarSummaryTests: XCTestCase {

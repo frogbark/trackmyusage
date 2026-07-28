@@ -1,5 +1,5 @@
 //
-//  Claudruple Link — deep-link broker for multiple Claude Desktop instances.
+//  TrackMyUsage Link — deep-link broker for multiple Claude Desktop instances.
 //
 //  The problem it solves
 //  --------------------
@@ -34,7 +34,7 @@ import AppKit
 enum Log {
     private static let url: URL = {
         let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/Claudruple", isDirectory: true)
+            .appendingPathComponent("Library/Logs/TrackMyUsage", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("link.log")
     }()
@@ -46,7 +46,7 @@ enum Log {
     }()
 
     static func write(_ message: String) {
-        NSLog("claudruple-link: %@", message)
+        NSLog("tmu-link: %@", message)
         let line = "[\(df.string(from: Date()))] \(message)\n"
         guard let data = line.data(using: .utf8) else { return }
         if let h = try? FileHandle(forWritingTo: url) {
@@ -61,7 +61,7 @@ enum Log {
 
 // MARK: - Configuration
 
-/// Bundle-identifier prefix shared by the stock app and every Claudruple clone.
+/// Bundle-identifier prefix shared by the stock app and every TrackMyUsage clone.
 private let claudeBundlePrefix = "com.anthropic.claudefordesktop"
 
 /// Schemes Claude Desktop claims. Owning both is what stops the tug-of-war.
@@ -107,7 +107,7 @@ enum InstanceRegistry {
 
     private static func candidateBundleIDs() -> [String] {
         // Running apps are authoritative; installed-but-not-running instances are
-        // discovered from the standard Claudruple location.
+        // discovered from the standard TrackMyUsage location.
         var ids = NSWorkspace.shared.runningApplications
             .compactMap(\.bundleIdentifier)
             .filter { $0.hasPrefix(claudeBundlePrefix) }

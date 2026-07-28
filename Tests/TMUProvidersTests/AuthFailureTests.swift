@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleUsage
+@testable import TMUProviders
 
 /// How a rejected credential is reported.
 ///

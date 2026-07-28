@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 /// Removal is the only destructive thing sync does, so the rules around it are pinned
 /// down harder than anything else in the planner.

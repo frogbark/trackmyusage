@@ -1,5 +1,5 @@
-import ClaudrupleRender
 import Foundation
+import TMURender
 
 /// One display, in the terms the wallpaper pipeline needs.
 public struct Display: Sendable, Equatable {

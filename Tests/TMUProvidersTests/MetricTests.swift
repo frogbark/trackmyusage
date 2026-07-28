@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleUsage
+@testable import TMUProviders
 
 final class MetricTests: XCTestCase {
 

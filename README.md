@@ -1,4 +1,4 @@
-# Claudruple
+# TrackMyUsage
 
 Run multiple Claude Desktop accounts on one Mac — properly.
 
@@ -10,7 +10,7 @@ asked for them, instead of whichever instance happened to launch last.
 > the menu bar app and the usage wallpaper all work and are in daily use. Four of seventeen
 > provider integrations are built — see [`docs/roadmap.md`](docs/roadmap.md).
 
-Claudruple never bundles or redistributes Claude Desktop. It clones the copy already
+TrackMyUsage never bundles or redistributes Claude Desktop. It clones the copy already
 installed on your machine, leaves `app.asar` byte-for-byte untouched, and never handles
 your credentials. **Each instance still requires its own paid Anthropic account.**
 
@@ -31,7 +31,7 @@ keys almost everything on identity:
 
 Data isolation was never the hard part. Identity is.
 
-## What Claudruple does instead
+## What TrackMyUsage does instead
 
 1. **A real bundle per instance.** APFS `clonefile` copy (sub-second, copy-on-write), a
    unique `CFBundleIdentifier`, re-signed inside-out, quarantine cleared.
@@ -55,16 +55,22 @@ the things that failed first.
 ## Usage
 
 ```bash
-git clone <this repo> && cd claudruple
+git clone <this repo> && cd trackmyusage
 
 # Build and install the deep-link broker (once)
 ./scripts/build-link.sh
-cp -Rp "build/Claudruple Link.app" /Applications/Claudruple/
+cp -Rp "build/TrackMyUsage Link.app" /Applications/Claudruple/
 ./scripts/install-link-agent.sh
 
 # Create an instance
 ./scripts/create-instance.sh "Work" --launch
 ```
+
+> `/Applications/Claudruple` is not a typo. The project was renamed, but that directory,
+> each clone's bundle id, and each clone's profile path are baked into LaunchServices
+> registrations, code signatures and a compiled-in launcher path. Renaming them would not
+> move anything — it would make working instances unreachable, silently. They stay.
+> See [`Sources/TMUKit/LegacyNames.swift`](Sources/TMUKit/LegacyNames.swift).
 
 Then sign into the new window with your second account. Remove one with:
 
@@ -77,18 +83,18 @@ Then sign into the new window with your second account. Remove one with:
 
 ```bash
 swift build -c release
-.build/release/claudruple instances                    # what is installed
-.build/release/claudruple capture "Claude" > claudruple.yaml
-.build/release/claudruple plan claudruple.yaml         # read-only: shows what would change
-.build/release/claudruple apply claudruple.yaml        # install what is missing
-.build/release/claudruple apply claudruple.yaml --prune # also remove unmanaged extensions
+.build/release/tmu instances                    # what is installed
+.build/release/tmu capture "Claude" > trackmyusage.yaml
+.build/release/tmu plan trackmyusage.yaml         # read-only: shows what would change
+.build/release/tmu apply trackmyusage.yaml        # install what is missing
+.build/release/tmu apply trackmyusage.yaml --prune # also remove unmanaged extensions
 ```
 
 Payloads are copied from an instance that already has them (`--from` to choose). On APFS
 this is a clonefile copy: 15 extensions totalling 700 MB apply in ~2 seconds and cost about
 54 MB of real disk. A snapshot is taken before the first write.
 
-The manifest is meant to be committed. See [`examples/claudruple.yaml`](examples/claudruple.yaml).
+The manifest is meant to be committed. See [`examples/trackmyusage.yaml`](examples/trackmyusage.yaml).
 
 Two rules the engine enforces rather than documents:
 
@@ -109,8 +115,8 @@ Two rules the engine enforces rather than documents:
 
 ```bash
 ./scripts/build-app.sh
-cp -Rp build/Claudruple.app /Applications/Claudruple/
-open -a "/Applications/Claudruple/Claudruple.app"
+cp -Rp build/TrackMyUsage.app /Applications/Claudruple/
+open -a "/Applications/Claudruple/TrackMyUsage.app"
 ```
 
 Every account's binding limit, always visible — `61% · 100%`, with a warning glyph when one
@@ -124,12 +130,12 @@ it start with the machine.
 ### Seeing usage across accounts
 
 ```bash
-.build/release/claudruple usage    # per-account limits, burn rate, time to exhaustion
-.build/release/claudruple steer    # which account to work in
+.build/release/tmu usage    # per-account limits, burn rate, time to exhaustion
+.build/release/tmu steer    # which account to work in
 ```
 
 No credentials and no network: Claude Desktop already records plan utilisation to
-`plan-usage-history.json` in each profile, tagged by organisation. Claudruple reads the same
+`plan-usage-history.json` in each profile, tagged by organisation. TrackMyUsage reads the same
 numbers the app does, for every account at once. Existing monitors estimate usage from
 Claude Code token logs; this is the app's own accounting.
 
@@ -139,9 +145,9 @@ Claude Code token logs; this is the app's own accounting.
 
 ```bash
 swift build -c release
-.build/release/claudrupled status    # what it would draw, and onto what
-.build/release/claudrupled render    # write the image, leave the desktop alone
-.build/release/claudrupled apply     # write it and set it as the wallpaper
+.build/release/tmud status    # what it would draw, and onto what
+.build/release/tmud render    # write the image, leave the desktop alone
+.build/release/tmud apply     # write it and set it as the wallpaper
 ```
 
 Composites every account's binding limit onto the desktop background. The pipeline is
@@ -156,10 +162,10 @@ provider is included when it needs no credential or has one stored.
 ### Metered service accounts
 
 ```bash
-.build/release/claudruple provider list           # what exists, what has a key
-.build/release/claudruple provider add stripe     # read from stdin, never a flag
-.build/release/claudruple provider probe stripe   # the real response, for writing a parser
-.build/release/claudruple provider check          # parsed snapshots
+.build/release/tmu provider list           # what exists, what has a key
+.build/release/tmu provider add stripe     # read from stdin, never a flag
+.build/release/tmu provider probe stripe   # the real response, for writing a parser
+.build/release/tmu provider check          # parsed snapshots
 ```
 
 Built today: Claude (local files, no credential), ElevenLabs, GitHub, Stripe, Twilio. The
@@ -180,7 +186,7 @@ per provider. Every adapter declares its minimum read-only scope in code.
 | `build-link.sh` | Build the deep-link broker |
 | `install-link-agent.sh` | Register the broker as a login agent |
 | `build-app.sh` | Build the menu bar app |
-| `finish-repair.sh` | One-off: migrate a Parall install into Claudruple |
+| `finish-repair.sh` | One-off: migrate a Parall install into TrackMyUsage |
 | `remove-parall.sh` | One-off: remove Parall after verifying the migration |
 
 ## Signing

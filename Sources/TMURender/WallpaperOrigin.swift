@@ -44,7 +44,7 @@ public enum WallpaperOrigin {
 
     /// Containment by path component, never by string prefix.
     ///
-    /// `…/Claudruple/wallpaper-backups/lake.jpg` begins with `…/Claudruple/wallpaper` as
+    /// `…/TrackMyUsage/wallpaper-backups/lake.jpg` begins with `…/TrackMyUsage/wallpaper` as
     /// characters while being a different directory entirely. A prefix test would classify
     /// a real photograph as our own output and throw it away.
     private static func isInside(_ url: URL, _ directory: URL) -> Bool {

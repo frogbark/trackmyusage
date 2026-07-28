@@ -7,7 +7,7 @@
 #
 set -euo pipefail
 
-LABEL="com.claudruple.wallpaper"
+LABEL="com.trackmyusage.wallpaper"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 ORIGIN_FILE="$HOME/Library/Application Support/Claudruple/original-wallpaper.txt"
 
@@ -34,5 +34,5 @@ else
     warn "no original was recorded — set one in System Settings → Wallpaper"
 fi
 
-printf '\n  The renders in ~/Library/Caches/Claudruple/wallpaper are left in place.\n'
-printf '  Remove them with: rm -rf ~/Library/Caches/Claudruple\n\n'
+printf '\n  The renders in ~/Library/Caches/TrackMyUsage/wallpaper are left in place.\n'
+printf '  Remove them with: rm -rf ~/Library/Caches/TrackMyUsage\n\n'

@@ -48,7 +48,7 @@ public struct URLSessionHTTPClient: HTTPClient {
     public init(timeout: TimeInterval = 15) {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = timeout
-        configuration.httpAdditionalHeaders = ["User-Agent": "Claudruple/0.1"]
+        configuration.httpAdditionalHeaders = ["User-Agent": "TrackMyUsage/0.1"]
         self.session = URLSession(configuration: configuration)
     }
 

@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 /// Sync copies configuration between instances that belong to *different accounts*.
 /// Classifying a key wrongly is not a cosmetic bug: carrying a permission grant or an

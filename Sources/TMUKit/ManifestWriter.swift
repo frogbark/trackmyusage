@@ -2,7 +2,7 @@ import Foundation
 
 extension Manifest {
 
-    /// Render specs as `claudruple.yaml`.
+    /// Render specs as `trackmyusage.yaml`.
     ///
     /// Hand-written rather than dumped through Yams so the output carries the comments
     /// that make a shared manifest legible. This file is the artifact people commit and
@@ -10,11 +10,11 @@ extension Manifest {
     /// worse at its actual job.
     public static func render(_ specs: [InstanceSpec]) -> String {
         var out = """
-            # claudruple.yaml — declarative Claude Desktop instance configuration.
+            # trackmyusage.yaml — declarative Claude Desktop instance configuration.
             #
-            #   claudruple plan  <this file>            show what would change
-            #   claudruple apply <this file>            install what is missing
-            #   claudruple apply <this file> --prune    also remove unmanaged extensions
+            #   tmu plan  <this file>            show what would change
+            #   tmu apply <this file>            install what is missing
+            #   tmu apply <this file> --prune    also remove unmanaged extensions
             #
             # policy: additive (default) installs but never removes.
             # policy: exact converges exactly — but removal still requires --prune, so a

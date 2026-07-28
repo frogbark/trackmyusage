@@ -63,10 +63,10 @@ public enum SyncApplier {
         ///
         /// Injectable because the default is the user's home directory, and a test that
         /// operates on a temp profile has no business writing there. Left hardcoded, every
-        /// run of the suite deposited eight directories in `~/Claudruple-Backups` — which
+        /// run of the suite deposited eight directories in `~/TrackMyUsage-Backups` — which
         /// is exactly what happened, several hundred times, before anyone looked.
         public var backupRoot: URL = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Claudruple-Backups")
+            .appendingPathComponent("TrackMyUsage-Backups")
 
         public init() {}
     }
@@ -146,7 +146,7 @@ public enum SyncApplier {
         // Stage beside the destination and swap into place, so an interrupted copy leaves
         // no half-populated extension directory for Claude to load on next launch.
         let staging = dst.deletingLastPathComponent()
-            .appendingPathComponent(".claudruple-staging-\(UUID().uuidString)")
+            .appendingPathComponent(".tmu-staging-\(UUID().uuidString)")
         try clone(src, to: staging)
 
         if FileManager.default.fileExists(atPath: dst.path) {

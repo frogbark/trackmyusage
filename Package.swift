@@ -6,17 +6,17 @@ import PackageDescription
 // create-instance.sh drives clang directly.
 
 let package = Package(
-    name: "Claudruple",
+    name: "TrackMyUsage",
     platforms: [.macOS(.v13)],
     products: [
-        .library(name: "ClaudrupleKit", targets: ["ClaudrupleKit"]),
-        .library(name: "ClaudrupleUsage", targets: ["ClaudrupleUsage"]),
-        .library(name: "ClaudrupleRender", targets: ["ClaudrupleRender"]),
-        .library(name: "ClaudrupleDesktop", targets: ["ClaudrupleDesktop"]),
-        .executable(name: "ClaudrupleLink", targets: ["ClaudrupleLink"]),
-        .executable(name: "claudrupled", targets: ["claudrupled"]),
-        .executable(name: "claudruple", targets: ["claudruple"]),
-        .executable(name: "ClaudrupleApp", targets: ["ClaudrupleApp"]),
+        .library(name: "TMUKit", targets: ["TMUKit"]),
+        .library(name: "TMUProviders", targets: ["TMUProviders"]),
+        .library(name: "TMURender", targets: ["TMURender"]),
+        .library(name: "TMUDesktop", targets: ["TMUDesktop"]),
+        .executable(name: "TMULink", targets: ["TMULink"]),
+        .executable(name: "tmud", targets: ["tmud"]),
+        .executable(name: "tmu", targets: ["tmu"]),
+        .executable(name: "TMUApp", targets: ["TMUApp"]),
     ],
     dependencies: [
         // The manifest is meant to be committed to dotfiles repos and shared, so it needs
@@ -25,44 +25,44 @@ let package = Package(
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.0")
     ],
     targets: [
-        .target(name: "ClaudrupleKit", dependencies: ["Yams"]),
-        // Deliberately depends on nothing. ClaudrupleKit is macOS-bound — InstanceLocator
+        .target(name: "TMUKit", dependencies: ["Yams"]),
+        // Deliberately depends on nothing. TMUKit is macOS-bound — InstanceLocator
         // reads /Applications, SyncApplier imports Darwin — and the usage layer has to
         // build on Linux and Windows, where the wallpaper runs but Claude Desktop does not
         // exist. Claude-specific reading stays behind an adapter that depends on both.
-        .target(name: "ClaudrupleUsage"),
+        .target(name: "TMUProviders"),
         // The bridge, and the only place the two worlds meet: Claude's local history is
-        // read through ClaudrupleKit, then mapped onto the provider-neutral shape.
+        // read through TMUKit, then mapped onto the provider-neutral shape.
         .target(
-            name: "ClaudrupleUsageClaude",
-            dependencies: ["ClaudrupleKit", "ClaudrupleUsage"]),
+            name: "TMUClaude",
+            dependencies: ["TMUKit", "TMUProviders"]),
         // Text in, text out. Producing SVG rather than pixels keeps the whole visual
         // design a pure function that diffs in a golden-file test, and leaves rasterising
         // as the only part that needs a platform.
-        .target(name: "ClaudrupleRender", dependencies: ["ClaudrupleUsage"]),
+        .target(name: "TMURender", dependencies: ["TMUProviders"]),
         // Reading and writing the desktop background is the one genuinely per-OS piece:
         // NSWorkspace here, a per-desktop-environment shell-out on Linux, and
         // SystemParametersInfoW on Windows.
-        .target(name: "ClaudrupleDesktop", dependencies: ["ClaudrupleRender"]),
-        .executableTarget(name: "ClaudrupleLink"),
+        .target(name: "TMUDesktop", dependencies: ["TMURender"]),
+        .executableTarget(name: "TMULink"),
         .executableTarget(
-            name: "claudrupled",
+            name: "tmud",
             dependencies: [
-                "ClaudrupleDesktop", "ClaudrupleRender", "ClaudrupleUsage",
-                "ClaudrupleUsageClaude",
+                "TMUDesktop", "TMURender", "TMUProviders",
+                "TMUClaude",
             ]),
-        .executableTarget(name: "claudruple", dependencies: ["ClaudrupleKit", "ClaudrupleUsage"]),
-        .executableTarget(name: "ClaudrupleApp", dependencies: ["ClaudrupleKit"]),
-        .testTarget(name: "ClaudrupleKitTests", dependencies: ["ClaudrupleKit"]),
-        .testTarget(name: "ClaudrupleUsageTests", dependencies: ["ClaudrupleUsage"]),
+        .executableTarget(name: "tmu", dependencies: ["TMUKit", "TMUProviders"]),
+        .executableTarget(name: "TMUApp", dependencies: ["TMUKit"]),
+        .testTarget(name: "TMUKitTests", dependencies: ["TMUKit"]),
+        .testTarget(name: "TMUProvidersTests", dependencies: ["TMUProviders"]),
         .testTarget(
-            name: "ClaudrupleDesktopTests",
-            dependencies: ["ClaudrupleDesktop", "ClaudrupleRender"]),
+            name: "TMUDesktopTests",
+            dependencies: ["TMUDesktop", "TMURender"]),
         .testTarget(
-            name: "ClaudrupleRenderTests",
-            dependencies: ["ClaudrupleRender", "ClaudrupleUsage"]),
+            name: "TMURenderTests",
+            dependencies: ["TMURender", "TMUProviders"]),
         .testTarget(
-            name: "ClaudrupleUsageClaudeTests",
-            dependencies: ["ClaudrupleUsageClaude", "ClaudrupleKit", "ClaudrupleUsage"]),
+            name: "TMUClaudeTests",
+            dependencies: ["TMUClaude", "TMUKit", "TMUProviders"]),
     ]
 )
