@@ -49,14 +49,14 @@ final class WallpaperSVGTests: XCTestCase {
     func testOutputIsWellFormedXML() {
         let svg = WallpaperSVG.render(
             [snapshot("claude", 78), unavailable("openart")],
-            density: .full, canvas: .init(width: 2560, height: 1440), generatedAt: now)
+            layout: .ledger, canvas: .init(width: 2560, height: 1440), generatedAt: now)
 
         XCTAssertTrue(isWellFormed(svg), "a malformed document rasterises to nothing at all")
     }
 
     func testTheCanvasSizeIsCarriedIntoTheDocument() {
         let svg = WallpaperSVG.render(
-            [snapshot("claude", 40)], density: .compact,
+            [snapshot("claude", 40)], layout: .card,
             canvas: .init(width: 3840, height: 2160), generatedAt: now)
 
         XCTAssertTrue(svg.contains("width=\"3840\""))
@@ -67,7 +67,7 @@ final class WallpaperSVGTests: XCTestCase {
         // The first run, before any adapter has reported, must not emit a broken file that
         // then gets set as the desktop background.
         let svg = WallpaperSVG.render(
-            [], density: .compact, canvas: .init(width: 2560, height: 1440),
+            [], layout: .card, canvas: .init(width: 2560, height: 1440),
             generatedAt: now)
 
         XCTAssertTrue(isWellFormed(svg))
@@ -77,33 +77,53 @@ final class WallpaperSVGTests: XCTestCase {
         // Provider identifiers are not ours — an adapter or a config file supplies them.
         // An unescaped ampersand produces a document that fails to parse, and the failure
         // shows up as a blank desktop rather than as an error.
+        // Short enough to survive the rail's 128pt name column; the escaping is the point,
+        // not the truncation.
         let svg = WallpaperSVG.render(
-            [snapshot("A & B <script>", 30)], density: .full,
+            [snapshot("a&b<i>", 30)], layout: .ledger,
             canvas: .init(width: 2560, height: 1440), generatedAt: now)
 
         XCTAssertTrue(isWellFormed(svg), "hostile provider names must not break parsing")
-        XCTAssertTrue(svg.contains("A &amp; B &lt;script&gt;"))
-        XCTAssertFalse(svg.contains("<script>"))
+        XCTAssertTrue(svg.contains("a&amp;b&lt;i&gt;"))
+        XCTAssertFalse(svg.contains("<i>"))
     }
 
     // MARK: - Density
 
-    func testCompactNamesOnlyTheHeadlineProviders() {
-        let many = (1...17).map { snapshot("provider\($0)", Double($0)) }
+    func testTheCardNamesOnlyTheHeadlineProvidersWhenAlerting() {
+        // One provider past 80% puts the card into its alert state, which is the only state
+        // that enumerates services at all.
+        let many = (1...17).map { snapshot("provider\($0)", Double($0) * 6) }
         let svg = WallpaperSVG.render(
-            many, density: .compact, canvas: .init(width: 2560, height: 1440),
+            many, layout: .card, canvas: .init(width: 2560, height: 1440),
             generatedAt: now)
 
         let named = (1...17).filter { svg.contains(">provider\($0)<") }
         XCTAssertEqual(
             named.count, WallpaperSVG.headlineCount,
-            "the compact card names a few and compresses the rest into the strip")
+            "the card names a few and compresses the rest into the strip")
+    }
+
+    /// Silence is information. A panel that looks the same whether things are fine or on
+    /// fire has taught you to ignore it, so the calm state gives up detail on purpose.
+    func testTheCardGoesQuietWhenNothingIsNearItsLimit() {
+        let calm = (1...17).map { snapshot("provider\($0)", Double($0)) }
+        let svg = WallpaperSVG.render(
+            calm, layout: .card, canvas: .init(width: 2560, height: 1440),
+            generatedAt: now)
+
+        let named = (1...17).filter { svg.contains(">provider\($0)<") }
+        XCTAssertTrue(named.isEmpty, "the quiet card does not enumerate services")
+        XCTAssertTrue(
+            svg.contains("17 services · all under 80%"),
+            "but it must say what it checked, or silence is indistinguishable from broken")
+        XCTAssertTrue(svg.contains("opacity=\"0.62\""), "and it must actually recede")
     }
 
     func testFullNamesEveryProvider() {
         let many = (1...17).map { snapshot("provider\($0)", Double($0)) }
         let svg = WallpaperSVG.render(
-            many, density: .full, canvas: .init(width: 2560, height: 1440),
+            many, layout: .ledger, canvas: .init(width: 2560, height: 1440),
             generatedAt: now)
 
         let named = (1...17).filter { svg.contains(">provider\($0)<") }
@@ -116,7 +136,7 @@ final class WallpaperSVGTests: XCTestCase {
         // Drawing "we could not ask" as an empty bar reads as plenty of headroom, which is
         // the opposite of what is true.
         let svg = WallpaperSVG.render(
-            [unavailable("openart")], density: .full,
+            [unavailable("openart")], layout: .ledger,
             canvas: .init(width: 2560, height: 1440), generatedAt: now)
 
         XCTAssertTrue(svg.contains("no data"), "absence is stated in words")
@@ -138,7 +158,7 @@ final class WallpaperSVGTests: XCTestCase {
                 ])
         }
         let svg = WallpaperSVG.render(
-            accounts, density: .full, canvas: .init(width: 2560, height: 1440),
+            accounts, layout: .ledger, canvas: .init(width: 2560, height: 1440),
             generatedAt: now)
 
         XCTAssertTrue(svg.contains(">Claude<"))
@@ -147,7 +167,7 @@ final class WallpaperSVGTests: XCTestCase {
 
     func testTheProviderNameLabelsTheRowWhenThereIsNoAccount() {
         let svg = WallpaperSVG.render(
-            [snapshot("vercel", 20)], density: .full,
+            [snapshot("vercel", 20)], layout: .ledger,
             canvas: .init(width: 2560, height: 1440), generatedAt: now)
 
         XCTAssertTrue(svg.contains(">vercel<"), "one unnamed account needs no extra label")
@@ -159,7 +179,7 @@ final class WallpaperSVGTests: XCTestCase {
         // looking at the pixels catches it — hence a test that pins the truncation.
         let long = "claude personal work experiments"
         let svg = WallpaperSVG.render(
-            [snapshot(long, 34)], density: .full,
+            [snapshot(long, 34)], layout: .ledger,
             canvas: .init(width: 2560, height: 1440), generatedAt: now)
 
         XCTAssertFalse(svg.contains(long), "the full name cannot fit and must not be drawn")
@@ -169,7 +189,7 @@ final class WallpaperSVGTests: XCTestCase {
 
     func testAShortNameIsLeftAlone() {
         let svg = WallpaperSVG.render(
-            [snapshot("vercel", 34)], density: .full,
+            [snapshot("vercel", 34)], layout: .ledger,
             canvas: .init(width: 2560, height: 1440), generatedAt: now)
 
         XCTAssertTrue(svg.contains(">vercel<"))
@@ -188,7 +208,7 @@ final class WallpaperSVGTests: XCTestCase {
                     limit: nil, window: .calendarMonth, resetsAt: nil)
             ])
         let svg = WallpaperSVG.render(
-            [stripe], density: .full, canvas: .init(width: 2560, height: 1440),
+            [stripe], layout: .ledger, canvas: .init(width: 2560, height: 1440),
             generatedAt: now)
 
         XCTAssertFalse(svg.contains("no data"), "the reading exists, it just has no cap")
@@ -208,7 +228,7 @@ final class WallpaperSVGTests: XCTestCase {
                     limit: nil, window: .none, resetsAt: nil)
             ])
         let svg = WallpaperSVG.render(
-            [seats], density: .full, canvas: .init(width: 2560, height: 1440),
+            [seats], layout: .ledger, canvas: .init(width: 2560, height: 1440),
             generatedAt: now)
 
         XCTAssertTrue(svg.contains("1,234,567"))
@@ -216,7 +236,7 @@ final class WallpaperSVGTests: XCTestCase {
 
     func testAProviderOverItsLimitIsMarkedDistinctly() {
         let svg = WallpaperSVG.render(
-            [snapshot("claude", 150)], density: .full,
+            [snapshot("claude", 150)], layout: .ledger,
             canvas: .init(width: 2560, height: 1440), generatedAt: now)
 
         XCTAssertTrue(svg.contains("over"), "past the cap is not the same as near it")
@@ -226,7 +246,7 @@ final class WallpaperSVGTests: XCTestCase {
         // The value is reported unclamped, but the drawn bar has to stay inside its track
         // or it paints over the labels beside it.
         let svg = WallpaperSVG.render(
-            [snapshot("claude", 250)], density: .full,
+            [snapshot("claude", 250)], layout: .ledger,
             canvas: .init(width: 2560, height: 1440), generatedAt: now)
 
         XCTAssertTrue(isWellFormed(svg))
@@ -250,10 +270,10 @@ final class WallpaperSVGTests: XCTestCase {
         // instability here means the wallpaper is rewritten every cycle for no reason.
         let input = [snapshot("claude", 78), unavailable("openart"), snapshot("vercel", 12)]
         let a = WallpaperSVG.render(
-            input, density: .full, canvas: .init(width: 2560, height: 1440),
+            input, layout: .ledger, canvas: .init(width: 2560, height: 1440),
             generatedAt: now)
         let b = WallpaperSVG.render(
-            input, density: .full, canvas: .init(width: 2560, height: 1440),
+            input, layout: .ledger, canvas: .init(width: 2560, height: 1440),
             generatedAt: now)
 
         XCTAssertEqual(a, b)
@@ -264,10 +284,10 @@ final class WallpaperSVGTests: XCTestCase {
     /// out in reverse. Invisible whenever two providers differ, which is nearly always.
     func testProvidersAtTheSamePercentageAreOrderedByName() {
         let tied = ["delta", "alpha", "charlie", "bravo", "echo"].map {
-            snapshot($0, 50)
+            snapshot($0, 85)
         }
         let svg = WallpaperSVG.render(
-            tied, density: .compact, canvas: .default, generatedAt: now)
+            tied, layout: .card, canvas: .default, generatedAt: now)
 
         // Four are headlined and drawn in name order; "echo" falls into the strip.
         let order = ["alpha", "bravo", "charlie", "delta"].map {
