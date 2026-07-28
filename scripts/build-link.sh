@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build Claudruple Link.app — the deep-link broker.
+# Build TrackMyUsage Link.app — the deep-link broker.
 #
 # Produces a minimal LSUIElement app bundle: no Xcode project, no dependencies,
 # just swiftc plus a hand-written Info.plist. Kept deliberately small so it is easy
@@ -10,19 +10,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${OUT:-$ROOT/build}"
 IDENTITY="${IDENTITY:--}"
 
-APP="$OUT/Claudruple Link.app"
-NAME="Claudruple Link"
-BUNDLE_ID="com.claudruple.link"
+APP="$OUT/TrackMyUsage Link.app"
+NAME="TrackMyUsage Link"
+BUNDLE_ID="com.trackmyusage.link"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 
 echo "==> compiling"
 # Built through SPM so the broker shares the package's toolchain settings and can depend
-# on ClaudrupleKit as it grows. The .app bundle around it is still assembled by hand —
+# on TMUKit as it grows. The .app bundle around it is still assembled by hand —
 # a bundle is all this needs, and an Xcode project would be more to maintain than it earns.
-( cd "$ROOT" && swift build -c release --product ClaudrupleLink )
-cp "$ROOT/.build/release/ClaudrupleLink" "$APP/Contents/MacOS/$NAME"
+( cd "$ROOT" && swift build -c release --product TMULink )
+cp "$ROOT/.build/release/TMULink" "$APP/Contents/MacOS/$NAME"
 
 echo "==> writing Info.plist"
 cat > "$APP/Contents/Info.plist" <<PLIST

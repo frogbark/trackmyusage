@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Phase 0 completion: migrate the Parall instance's data into the Claudruple clone and
+# Phase 0 completion: migrate the Parall instance's data into the TrackMyUsage clone and
 # clear the stale LaunchServices state.
 #
 #   RUN THIS FROM Terminal.app — NOT from inside Claude.
@@ -14,10 +14,12 @@ set -euo pipefail
 
 SUPPORT="$HOME/Library/Application Support"
 SRC_DATA="$SUPPORT/Parall/Claude 2"
+# Instance profiles live under the pre-rename directory name and always will: it is
+# compiled into each clone's launcher shim. See Sources/TMUKit/LegacyNames.swift.
 DST_DATA="$SUPPORT/Claudruple/Claude Two"
 CLONE="/Applications/Claudruple/Claude Two.app"
 PRIMARY="/Applications/Claude.app"
-BROKER="/Applications/Claudruple/Claudruple Link.app"
+BROKER="/Applications/Claudruple/TrackMyUsage Link.app"
 GHOST="/Applications/Claude 2.app"
 LSREG="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
@@ -37,7 +39,7 @@ if [ -d "$SRC_DATA" ]; then ok "source data found"; else warn "no Parall data at
 # ---------------------------------------------------------------- backup
 
 say "Backup (APFS clone — instant, near-zero disk)"
-BK="$HOME/Claudruple-Backups/finish-$(date +%Y%m%d-%H%M%S)"
+BK="$HOME/TrackMyUsage-Backups/finish-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BK"
 [ -d "$SRC_DATA" ] && cp -Rc "$SRC_DATA" "$BK/parall-claude2"
 [ -d "$DST_DATA" ] && cp -Rc "$DST_DATA" "$BK/clone-before"
@@ -111,7 +113,7 @@ ok "rebuilt and re-registered"
 # ---------------------------------------------------------------- restart
 
 say "Restarting"
-launchctl kickstart -k "gui/$UID/com.claudruple.link" 2>/dev/null || open -a "$BROKER"
+launchctl kickstart -k "gui/$UID/com.trackmyusage.link" 2>/dev/null || open -a "$BROKER"
 sleep 3
 open -a "$PRIMARY";  sleep 6
 open -a "$CLONE";    sleep 8
@@ -122,14 +124,14 @@ say "Verification"
 n=$(pgrep -f "MacOS/Claude" | wc -l | tr -d ' ')
 [ "$n" -ge 2 ] && ok "$n Claude processes running" || warn "only $n Claude process(es)"
 
-pgrep -f "Claudruple Link" >/dev/null && ok "broker running" || warn "broker NOT running"
+pgrep -f "TrackMyUsage Link" >/dev/null && ok "broker running" || warn "broker NOT running"
 
 owner=$(osascript -l JavaScript -e '
   ObjC.import("AppKit");
   const u = $.NSURL.URLWithString("claude://probe");
   const a = $.NSWorkspace.sharedWorkspace.URLForApplicationToOpenURL(u);
   a.isNil() ? "none" : ObjC.unwrap(a.lastPathComponent);' 2>/dev/null || echo "?")
-[ "$owner" = "Claudruple Link.app" ] && ok "claude:// owned by the broker" \
+[ "$owner" = "TrackMyUsage Link.app" ] && ok "claude:// owned by the broker" \
                                      || warn "claude:// owned by: $owner"
 
 find /private/var/folders -maxdepth 6 -name "Claude 2.app" -path "*AppTranslocation*" 2>/dev/null | grep -q . \

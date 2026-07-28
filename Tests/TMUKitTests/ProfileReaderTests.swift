@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 /// Reads a real instance profile off disk. Tested against real temp directories rather
 /// than a mocked FileManager: the interesting cases here *are* filesystem cases —
@@ -12,7 +12,7 @@ final class ProfileReaderTests: XCTestCase {
 
     override func setUpWithError() throws {
         profile = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("claudruple-test-\(UUID().uuidString)")
+            .appendingPathComponent("tmu-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: profile, withIntermediateDirectories: true)
     }
 

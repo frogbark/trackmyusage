@@ -1,7 +1,7 @@
-import ClaudrupleUsage
 import Foundation
+import TMUProviders
 
-/// `claudruple provider …`
+/// `tmu provider …`
 enum ProviderCommands {
 
     static func run(_ args: [String]) {
@@ -89,7 +89,7 @@ enum ProviderCommands {
         let p = find(id)
         let secret = (try? credentials.secret(for: p.id)) ?? nil
         if p.credentialSpec.required && secret == nil {
-            die("no credential stored — run: claudruple provider add \(p.id)")
+            die("no credential stored — run: tmu provider add \(p.id)")
         }
 
         let snapshot = runBlocking { await p.snapshot(credentials: credentials, now: Date()) }
@@ -103,7 +103,7 @@ enum ProviderCommands {
             !p.credentialSpec.required || ((try? credentials.secret(for: p.id)) ?? nil) != nil
         }
         guard !configured.isEmpty else {
-            return print("no provider credentials stored — see: claudruple provider list")
+            return print("no provider credentials stored — see: tmu provider list")
         }
         for p in configured {
             render(runBlocking { await p.snapshot(credentials: credentials, now: Date()) })
@@ -119,7 +119,7 @@ enum ProviderCommands {
 
         switch snapshot.status {
         case .unauthorized:
-            print("    no credential — claudruple provider add \(snapshot.provider)")
+            print("    no credential — tmu provider add \(snapshot.provider)")
         case .unavailable(let reason):
             // A failed provider keeps its row. Dropping it would make an outage look
             // identical to never having configured the thing.

@@ -1,11 +1,11 @@
 #if canImport(AppKit)
 
 import AppKit
-import ClaudrupleUsage
+import TMUProviders
 import Foundation
 import XCTest
 
-@testable import ClaudrupleRender
+@testable import TMURender
 
 final class AppKitRasterizerTests: XCTestCase {
 

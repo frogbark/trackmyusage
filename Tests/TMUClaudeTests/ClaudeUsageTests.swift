@@ -1,8 +1,8 @@
-import ClaudrupleKit
-import ClaudrupleUsage
+import TMUKit
+import TMUProviders
 import XCTest
 
-@testable import ClaudrupleUsageClaude
+@testable import TMUClaude
 
 final class ClaudeUsageTests: XCTestCase {
 

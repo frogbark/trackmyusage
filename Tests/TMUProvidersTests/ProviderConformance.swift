@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import ClaudrupleUsage
+@testable import TMUProviders
 
 /// The contract every adapter has to satisfy, run against recorded fixtures.
 ///

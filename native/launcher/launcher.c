@@ -1,5 +1,5 @@
 /*
- * Claudruple in-bundle launcher.
+ * TrackMyUsage in-bundle launcher.
  *
  * Claude Desktop hardcodes app.setName("Claude"), so CFBundleName cannot steer
  * Electron's userData path -- every clone would otherwise open the primary's
@@ -35,21 +35,21 @@ int main(int argc, char *argv[]) {
     char self[PATH_MAX];
     uint32_t size = sizeof(self);
     if (_NSGetExecutablePath(self, &size) != 0) {
-        fprintf(stderr, "claudruple: executable path too long\n");
+        fprintf(stderr, "tmu: executable path too long\n");
         return 127;
     }
 
     /* Trim to the containing directory without mutating via dirname(). */
     char *slash = strrchr(self, '/');
     if (!slash) {
-        fprintf(stderr, "claudruple: unexpected executable path\n");
+        fprintf(stderr, "tmu: unexpected executable path\n");
         return 127;
     }
     *slash = '\0';
 
     char real[PATH_MAX];
     if (snprintf(real, sizeof(real), "%s/%s", self, REAL_BINARY) >= (int)sizeof(real)) {
-        fprintf(stderr, "claudruple: target path too long\n");
+        fprintf(stderr, "tmu: target path too long\n");
         return 127;
     }
 
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     }
 
     char **out = calloc((size_t)argc + 2, sizeof(char *));
-    if (!out) { fprintf(stderr, "claudruple: out of memory\n"); return 127; }
+    if (!out) { fprintf(stderr, "tmu: out of memory\n"); return 127; }
 
     int n = 0;
     out[n++] = real;
@@ -71,6 +71,6 @@ int main(int argc, char *argv[]) {
     execv(real, out);
 
     /* execv only returns on failure. */
-    perror("claudruple: execv");
+    perror("tmu: execv");
     return 127;
 }

@@ -37,7 +37,7 @@ public enum ManifestError: Error, Equatable, CustomStringConvertible {
     }
 }
 
-/// A parsed `claudruple.yaml`.
+/// A parsed `trackmyusage.yaml`.
 public struct Manifest: Sendable, Equatable {
     public static let supportedVersion = 1
 

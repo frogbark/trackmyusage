@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import ClaudrupleUsage
+@testable import TMUProviders
 
 /// Exercises the conformance suite itself.
 ///

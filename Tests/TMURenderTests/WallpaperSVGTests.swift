@@ -1,8 +1,8 @@
-import ClaudrupleUsage
 import Foundation
+import TMUProviders
 import XCTest
 
-@testable import ClaudrupleRender
+@testable import TMURender
 
 final class WallpaperSVGTests: XCTestCase {
 

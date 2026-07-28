@@ -9,7 +9,7 @@ import Foundation
 public struct WallpaperState: Codable, Sendable, Equatable {
 
     public struct PerDisplay: Codable, Sendable, Equatable {
-        /// The wallpaper as it was before Claudruple first touched it.
+        /// The wallpaper as it was before TrackMyUsage first touched it.
         public var pristine: URL?
         /// The filename written last, so the next write can pick the other one.
         public var lastOutput: String?

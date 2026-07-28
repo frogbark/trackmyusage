@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Remove a Claudruple instance.
+# Remove a TrackMyUsage instance.
 #
 #   ./remove-instance.sh "Work"              # removes the app, keeps the data
 #   ./remove-instance.sh "Work" --purge-data # also deletes the profile
@@ -37,7 +37,7 @@ rm -rf "$APP"
 ok "removed $APP"
 
 if [ "$PURGE" = "1" ] && [ -d "$UDD" ]; then
-  BK="$HOME/Claudruple-Backups/removed-$NAME-$(date +%Y%m%d-%H%M%S)"
+  BK="$HOME/TrackMyUsage-Backups/removed-$NAME-$(date +%Y%m%d-%H%M%S)"
   mkdir -p "$(dirname "$BK")"
   cp -Rc "$UDD" "$BK"        # APFS clone: a free safety net before an irreversible delete
   rm -rf "$UDD"

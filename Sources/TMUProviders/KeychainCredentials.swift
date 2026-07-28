@@ -11,14 +11,39 @@ import Security
 /// state for something driven by a launch agent.
 public struct KeychainCredentials: CredentialStore {
 
-    private let service: String
+    /// Where secrets are written.
+    public static let defaultService = "com.trackmyusage.usage"
 
-    public init(service: String = "com.claudruple.usage") {
+    /// Where secrets were written before the rename, and where reads still fall back to.
+    ///
+    /// This is the one frozen name that cannot live in `TMUKit.LegacyNames` with the other
+    /// three: this target deliberately depends on nothing so it builds where Claude Desktop
+    /// does not exist, and importing TMUKit to reach a string constant would trade that away.
+    ///
+    /// The fallback is permanent rather than transitional. Migration relabels items in place,
+    /// but a keychain that was locked at the moment migration ran — or an item the user
+    /// declined to unlock — is left behind, and re-adding a token by hand is a worse outcome
+    /// than one extra lookup that returns nothing.
+    public static let legacyService = "com.claudruple.usage"
+
+    private let service: String
+    private let fallbackService: String?
+
+    public init(service: String = KeychainCredentials.defaultService) {
         self.service = service
+        // Only fall back when reading the current service. A caller that names a service
+        // explicitly is asking about that service, and should not silently get another.
+        self.fallbackService = service == Self.defaultService ? Self.legacyService : nil
     }
 
     public func secret(for provider: String) throws -> String? {
-        var query = baseQuery(provider)
+        if let found = try secret(for: provider, in: service) { return found }
+        guard let fallbackService else { return nil }
+        return try secret(for: provider, in: fallbackService)
+    }
+
+    private func secret(for provider: String, in service: String) throws -> String? {
+        var query = baseQuery(provider, service: service)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
 
@@ -39,9 +64,14 @@ public struct KeychainCredentials: CredentialStore {
 
     public func set(_ secret: String?, for provider: String) throws {
         guard let secret, !secret.isEmpty else {
-            let status = SecItemDelete(baseQuery(provider) as CFDictionary)
-            guard status == errSecSuccess || status == errSecItemNotFound else {
-                throw CredentialError.keychain(Int(status))
+            // Delete from the legacy service too. Removing only the current one would
+            // "remove" a token that the read fallback then resurrects on the next call —
+            // a disconnected provider that keeps reporting.
+            for service in [service] + (fallbackService.map { [$0] } ?? []) {
+                let status = SecItemDelete(baseQuery(provider, service: service) as CFDictionary)
+                guard status == errSecSuccess || status == errSecItemNotFound else {
+                    throw CredentialError.keychain(Int(status))
+                }
             }
             return
         }
@@ -64,10 +94,10 @@ public struct KeychainCredentials: CredentialStore {
         guard status == errSecSuccess else { throw CredentialError.keychain(Int(status)) }
     }
 
-    private func baseQuery(_ provider: String) -> [String: Any] {
+    private func baseQuery(_ provider: String, service: String? = nil) -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            kSecAttrService as String: service ?? self.service,
             kSecAttrAccount as String: provider,
         ]
     }

@@ -1,11 +1,11 @@
 import Foundation
 import XCTest
 
-@testable import ClaudrupleRender
+@testable import TMURender
 
 final class WallpaperOriginTests: XCTestCase {
 
-    private let output = URL(fileURLWithPath: "/Users/x/Library/Caches/Claudruple/wallpaper")
+    private let output = URL(fileURLWithPath: "/Users/x/Library/Caches/TrackMyUsage/wallpaper")
     private let photo = URL(fileURLWithPath: "/Users/x/Pictures/lake.jpg")
 
     /// Readability is injected so these stay pure path tests. `unreadable` names the files
@@ -54,11 +54,11 @@ final class WallpaperOriginTests: XCTestCase {
     }
 
     func testADirectoryMerelySharingAPrefixIsNotOurs() {
-        // "/…/Claudruple/wallpaper-backups" begins with the output path as a *string* but
+        // "/…/TrackMyUsage/wallpaper-backups" begins with the output path as a *string* but
         // is a different directory. Comparing path components rather than characters is
         // what stops a real photo from being mistaken for our own output and discarded.
         let neighbour = URL(
-            fileURLWithPath: "/Users/x/Library/Caches/Claudruple/wallpaper-backups/lake.jpg")
+            fileURLWithPath: "/Users/x/Library/Caches/TrackMyUsage/wallpaper-backups/lake.jpg")
         let origin = origin(current: neighbour, remembered: photo)
 
         XCTAssertEqual(origin, neighbour, "a prefix match is not a containment match")
@@ -66,7 +66,7 @@ final class WallpaperOriginTests: XCTestCase {
 
     func testRelativeSegmentsAreResolvedBeforeComparing() {
         let sneaky = URL(
-            fileURLWithPath: "/Users/x/Library/Caches/Claudruple/wallpaper/../wallpaper/d.png")
+            fileURLWithPath: "/Users/x/Library/Caches/TrackMyUsage/wallpaper/../wallpaper/d.png")
         let origin = origin(current: sneaky, remembered: photo)
 
         XCTAssertEqual(origin, photo, "it resolves into our directory, so it is ours")

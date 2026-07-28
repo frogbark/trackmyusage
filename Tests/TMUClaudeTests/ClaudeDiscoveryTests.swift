@@ -1,8 +1,8 @@
-import ClaudrupleKit
-import ClaudrupleUsage
+import TMUKit
+import TMUProviders
 import XCTest
 
-@testable import ClaudrupleUsageClaude
+@testable import TMUClaude
 
 final class ClaudeDiscoveryTests: XCTestCase {
 
@@ -10,7 +10,7 @@ final class ClaudeDiscoveryTests: XCTestCase {
 
     override func setUpWithError() throws {
         profile = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("claudruple-test-\(UUID().uuidString)")
+            .appendingPathComponent("tmu-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(
             at: profile, withIntermediateDirectories: true)
     }

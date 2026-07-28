@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import ClaudrupleDesktop
+@testable import TMUDesktop
 
 final class WallpaperStateTests: XCTestCase {
 
@@ -10,7 +10,7 @@ final class WallpaperStateTests: XCTestCase {
 
     override func setUpWithError() throws {
         directory = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("claudruple-state-\(UUID().uuidString)")
+            .appendingPathComponent("tmu-state-\(UUID().uuidString)")
         try FileManager.default.createDirectory(
             at: directory, withIntermediateDirectories: true)
     }
