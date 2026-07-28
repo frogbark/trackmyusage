@@ -8,6 +8,10 @@
 # without going through LegacyNames, or a rename somebody missed; both want a human.
 #
 # See Sources/TMUKit/LegacyNames.swift for why each of these cannot change.
+#
+# The migration code is exempt wholesale. Naming the old paths, labels and bundle names is
+# precisely its job — it is the one place that has to know what the world looked like before
+# the rename — so scanning it produces forty findings and zero signal.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -19,6 +23,8 @@ findings=$(
     git grep -nI -i claudruple -- \
         Sources Tests Package.swift scripts native examples \
         ':!scripts/check-frozen-names.sh' \
+        ':!Sources/TMUKit/Migration' \
+        ':!Tests/TMUKitTests/Migration*' \
         | grep -vEi "$ALLOWED" \
         || true
 )

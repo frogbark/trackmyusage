@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import TMUKit
+import TMUProviders
 
 // Argument parsing is hand-rolled. There are four subcommands and two flags; pulling in
 // swift-argument-parser would add a dependency to a tool whose selling point is that it
@@ -361,6 +362,23 @@ if let i = args.firstIndex(of: "--from") {
     args.removeSubrange(i...(i + 1))
 }
 args.removeAll { $0 == "--prune" || $0 == "--with-settings" || $0 == "--yes" }
+
+// Any of the three binaries can be the first thing run after an upgrade, so each migrates.
+// Skipped for help and --version: those must stay instant and must not provoke a keychain
+// prompt for somebody who only wanted to read the usage text.
+if let command = args.first, !["help", "--help", "-h", "--version"].contains(command) {
+    if let receipt = Migration.runOnceIfNeeded(
+        legacyKeychainService: KeychainCredentials.legacyService,
+        newKeychainService: KeychainCredentials.defaultService)
+    {
+        // Only the incomplete ones are worth a line. A migration that worked is not news,
+        // and printing it before every command would train people to ignore the output.
+        for (step, outcome) in receipt.outcomes.sorted(by: { $0.key < $1.key })
+        where outcome != .done {
+            FileHandle.standardError.write(Data("migration: \(step) \(outcome.summary)\n".utf8))
+        }
+    }
+}
 
 switch args.first {
 case "instances":
