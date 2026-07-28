@@ -7,4 +7,5 @@
 # Only add a commit here if it is provably mechanical — a wholesale reformat, or a pure
 # rename. Never a commit that changed behaviour, or blame will lie about it.
 
-# (commits are appended below as they land)
+# Format: apply swift-format to the existing tree
+bd6368033a4185580037fd4ff1a14560273dff68
