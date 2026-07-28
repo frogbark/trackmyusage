@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 /// The manifest is the artifact people commit and share, so parsing it is held to the
 /// same standard as the security boundary: ambiguity gets rejected, not guessed at.

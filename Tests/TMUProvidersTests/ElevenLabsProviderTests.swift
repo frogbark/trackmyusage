@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleUsage
+@testable import TMUProviders
 
 /// ElevenLabs. Fixture mirrors `GET /v1/user/subscription` as documented.
 final class ElevenLabsProviderTests: XCTestCase {

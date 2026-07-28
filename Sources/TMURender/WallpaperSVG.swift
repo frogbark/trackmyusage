@@ -1,5 +1,5 @@
-import ClaudrupleUsage
 import Foundation
+import TMUProviders
 
 /// The pixel dimensions the wallpaper is being drawn for.
 public struct WallpaperCanvas: Sendable, Equatable {

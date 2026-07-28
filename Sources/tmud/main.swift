@@ -1,10 +1,10 @@
-import ClaudrupleDesktop
-import ClaudrupleRender
-import ClaudrupleUsage
-import ClaudrupleUsageClaude
 import Foundation
+import TMUClaude
+import TMUDesktop
+import TMUProviders
+import TMURender
 
-// Hand-rolled dispatch, matching `claudruple`. The whole surface is three verbs and one
+// Hand-rolled dispatch, matching `tmu`. The whole surface is three verbs and one
 // flag; a dependency to parse that would be larger than the thing it parses.
 
 let version = "0.1.0"
@@ -12,12 +12,12 @@ let version = "0.1.0"
 func usage() {
     print(
         """
-        claudrupled \(version) — renders the usage wallpaper
+        tmud \(version) — renders the usage wallpaper
 
         USAGE
-          claudrupled status                 what it would draw, and onto what
-          claudrupled render [--density D]   write the image, leave the desktop alone
-          claudrupled apply  [--density D]   write the image and set it as the wallpaper
+          tmud status                 what it would draw, and onto what
+          tmud render [--density D]   write the image, leave the desktop alone
+          tmud apply  [--density D]   write the image and set it as the wallpaper
 
         OPTIONS
           --density compact|full   compact: a corner card naming a few providers
@@ -29,7 +29,7 @@ func outputDirectory() -> URL {
     let caches =
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
         ?? URL(fileURLWithPath: NSTemporaryDirectory())
-    return caches.appendingPathComponent("Claudruple/wallpaper", isDirectory: true)
+    return caches.appendingPathComponent("TrackMyUsage/wallpaper", isDirectory: true)
 }
 
 /// Everything we know right now, from every adapter that has one.

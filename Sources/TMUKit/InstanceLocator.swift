@@ -6,7 +6,7 @@ public struct DiscoveredInstance: Sendable, Equatable {
     public let bundleID: String
     public let appURL: URL
     public let profileURL: URL
-    /// True for `/Applications/Claude.app`, which Claudruple never modifies.
+    /// True for `/Applications/Claude.app`, which TrackMyUsage never modifies.
     public let isPrimary: Bool
 }
 
@@ -16,14 +16,14 @@ public enum InstanceLocator {
     public static let claudeBundlePrefix = "com.anthropic.claudefordesktop"
     public static let primaryBundleID = claudeBundlePrefix
     public static let primaryAppPath = "/Applications/Claude.app"
-    public static let instancesDirectory = "/Applications/Claudruple"
+    public static let instancesDirectory = LegacyNames.instancesDirectory
 
     /// Helper bundles share the prefix (`…claudefordesktop.helper`) but are nested inside
-    /// a parent app. Clones are distinguished by the `.claudruple.` infix that
-    /// create-instance.sh assigns.
+    /// a parent app. Clones are distinguished by the infix create-instance.sh assigns —
+    /// which predates the rename and cannot change. See `LegacyNames`.
     public static func isClaudeInstance(bundleID: String) -> Bool {
         if bundleID == primaryBundleID { return true }
-        return bundleID.hasPrefix("\(claudeBundlePrefix).claudruple.")
+        return bundleID.hasPrefix("\(claudeBundlePrefix).\(LegacyNames.instanceBundleInfix).")
     }
 
     /// Where an instance keeps its Electron profile.
@@ -39,7 +39,7 @@ public enum InstanceLocator {
         }
         return
             support
-            .appendingPathComponent("Claudruple")
+            .appendingPathComponent(LegacyNames.instanceProfileDirectory)
             .appendingPathComponent(displayName)
     }
 

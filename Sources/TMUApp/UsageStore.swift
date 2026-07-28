@@ -1,7 +1,7 @@
 import AppKit
-import ClaudrupleKit
 import Combine
 import Foundation
+import TMUKit
 import UserNotifications
 
 /// Polls every instance's usage history and publishes the current picture.

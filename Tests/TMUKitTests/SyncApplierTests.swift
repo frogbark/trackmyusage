@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 /// The applier is the only component that writes, so its failure modes are pinned down
 /// harder than anything else. Tested against real temp profiles — the interesting cases
@@ -13,7 +13,7 @@ final class SyncApplierTests: XCTestCase {
 
     override func setUpWithError() throws {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("claudruple-apply-\(UUID().uuidString)")
+            .appendingPathComponent("tmu-apply-\(UUID().uuidString)")
         source = root.appendingPathComponent("source")
         target = root.appendingPathComponent("target")
         for u in [source!, target!] {
@@ -72,7 +72,7 @@ final class SyncApplierTests: XCTestCase {
     /// Options with the backup root pointed inside the temp tree.
     ///
     /// The default is the user's home directory. Without this every run of the suite left
-    /// eight directories in ~/Claudruple-Backups; several hundred had accumulated before
+    /// eight directories in ~/TrackMyUsage-Backups; several hundred had accumulated before
     /// anyone noticed, because nothing failed.
     private func options(includeSettings: Bool = false) -> SyncApplier.Options {
         var o = SyncApplier.Options()
@@ -232,13 +232,13 @@ final class SyncApplierTests: XCTestCase {
 
     func testBackupsGoWhereTheyAreToldAndNowhereElse() throws {
         // Regression. The backup root used to be hardcoded to the user's home directory,
-        // so every run of this suite deposited eight snapshots in ~/Claudruple-Backups.
+        // so every run of this suite deposited eight snapshots in ~/TrackMyUsage-Backups.
         // Nothing failed, so several hundred accumulated before anyone looked.
         try plant("ext.gone", in: target)
         try writeRegistry(["ext.gone"], in: target)
 
         let home = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Claudruple-Backups")
+            .appendingPathComponent("TrackMyUsage-Backups")
         let before = (try? fm.contentsOfDirectory(atPath: home.path))?.count ?? 0
 
         let result = try SyncApplier.apply(

@@ -1,6 +1,6 @@
 import AppKit
-import ClaudrupleKit
 import Foundation
+import TMUKit
 
 // Argument parsing is hand-rolled. There are four subcommands and two flags; pulling in
 // swift-argument-parser would add a dependency to a tool whose selling point is that it
@@ -14,16 +14,16 @@ func die(_ message: String) -> Never {
 }
 
 let usage = """
-    claudruple \(version) — multi-account Claude Desktop
+    tmu \(version) — multi-account Claude Desktop
 
     USAGE
-      claudruple instances                      list installed instances
-      claudruple usage                          plan usage per account
-      claudruple steer [--yes]                  which account to work in
-      claudruple provider <list|add|probe|check>  metered service accounts
-      claudruple capture [name]                 write a manifest from what is installed
-      claudruple plan <manifest.yaml>           show what would change (read-only)
-      claudruple apply <manifest.yaml>          make it so
+      tmu instances                      list installed instances
+      tmu usage                          plan usage per account
+      tmu steer [--yes]                  which account to work in
+      tmu provider <list|add|probe|check>  metered service accounts
+      tmu capture [name]                 write a manifest from what is installed
+      tmu plan <manifest.yaml>           show what would change (read-only)
+      tmu apply <manifest.yaml>          make it so
 
     FLAGS
       --prune            authorise removals. Required even when the manifest declares

@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleUsage
+@testable import TMUProviders
 
 /// Stripe. Amounts arrive in minor units — 666670 is 6666.70 — which is the detail most
 /// likely to produce a figure wrong by 100x that still looks plausible.

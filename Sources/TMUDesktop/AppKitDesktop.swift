@@ -1,7 +1,7 @@
 #if canImport(AppKit)
 
 import AppKit
-import ClaudrupleRender
+import TMURender
 import Foundation
 
 public struct AppKitDesktop: Desktop {

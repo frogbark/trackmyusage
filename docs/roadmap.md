@@ -3,16 +3,16 @@
 ## Where things are
 
 ```
-ClaudrupleKit           instances · sync · Claude's local usage · steering
-ClaudrupleUsage         the provider SDK: HTTP seam, snapshots, credentials, adapters
-ClaudrupleUsageClaude   Claude's local history as provider snapshots
-ClaudrupleRender        usage → SVG → raster
-ClaudrupleDesktop       reading and writing the desktop background
+TMUKit           instances · sync · Claude's local usage · steering
+TMUProviders         the provider SDK: HTTP seam, snapshots, credentials, adapters
+TMUClaude   Claude's local history as provider snapshots
+TMURender        usage → SVG → raster
+TMUDesktop       reading and writing the desktop background
 
-claudruple              CLI: instances, sync, usage, steer, providers
-claudrupled             renders and applies the usage wallpaper
-Claudruple.app          menu bar gauge and instance window
-Claudruple Link.app     deep-link broker
+tmu              CLI: instances, sync, usage, steer, providers
+tmud             renders and applies the usage wallpaper
+TrackMyUsage.app          menu bar gauge and instance window
+TrackMyUsage Link.app     deep-link broker
 ```
 
 | | State |
@@ -73,7 +73,7 @@ locking someone out of their own tooling.
 
 ## Usage wallpaper ✅
 
-`claudrupled` composites every provider's binding limit onto the desktop background.
+`tmud` composites every provider's binding limit onto the desktop background.
 
 The pipeline is snapshots → SVG → raster → desktop, and the split is what makes it testable:
 the whole visual design is a pure function from snapshots to SVG text, so a layout
@@ -113,7 +113,7 @@ is honestly incomplete.
 | Firecrawl, Resend, Supabase, Modal, Inngest | thinner data expected |
 | Hostinger, Higgsfield, OpenArt | no confirmed usage API; may end up manual entry |
 
-`claudruple provider probe <id>` closes the gap: it performs the real call and prints what
+`tmu provider probe <id>` closes the gap: it performs the real call and prints what
 came back, so a parser gets written against fact and the response saved as a fixture. That
 is also what lets a contributor add a provider without anyone else holding an account.
 
@@ -188,7 +188,7 @@ checks.
 ## Release — not started
 
 Developer ID signed and notarised, built in CI, buildable from source. Homebrew cask for the
-apps, `brew install claudruple` for the CLI.
+apps, `brew install tmu` for the CLI.
 
 Not the Mac App Store: the sandbox forbids `codesign`, cannot clear quarantine on files it
 writes, and cannot manage LaunchServices — the exact ceiling that breaks existing tools.

@@ -1,11 +1,11 @@
-# Claudruple → TrackMyUsage
+# TrackMyUsage
 
 Multi-account Claude Desktop management plus usage telemetry across your dev stack, on the
 menu bar and painted onto the desktop wallpaper.
 
-> **Rename in progress.** The product is becoming **TrackMyUsage**; the code still says
-> `Claudruple` until that PR lands. When it does, update this file's target map — and read
-> the frozen-names section below before changing a single string that reaches disk.
+The project was called **Claudruple** until mid-2026. That name still appears in four places
+on disk and always will — read the frozen-names section before changing any string that
+reaches a file, a bundle id or the keychain.
 
 ## The gate
 
@@ -35,17 +35,21 @@ never a commit that changed behaviour.
 ## Layout
 
 ```
-ClaudrupleKit           instances · sync · Claude's local usage · steering
-ClaudrupleUsage         the provider SDK: HTTP seam, snapshots, credentials, adapters
-ClaudrupleUsageClaude   Claude's local history as provider snapshots
-ClaudrupleRender        usage → SVG → raster
-ClaudrupleDesktop       reading and writing the desktop background
+TMUKit                  instances · sync · Claude's local usage · steering
+TMUProviders            the provider SDK: HTTP seam, snapshots, credentials, adapters
+TMUClaude               Claude's local history as provider snapshots
+TMURender               usage → SVG → raster
+TMUDesktop              reading and writing the desktop background
 
-claudruple              CLI: instances, sync, usage, steer, providers
-claudrupled             renders and applies the usage wallpaper (one-shot, not resident)
-Claudruple.app          menu bar gauge and instance window
-Claudruple Link.app     deep-link broker
+tmu                     CLI: instances, sync, usage, steer, providers
+tmud                    renders and applies the usage wallpaper (one-shot, not resident)
+TrackMyUsage.app        menu bar gauge and instance window
+TrackMyUsage Link.app   deep-link broker
 ```
+
+Modules are TMU-prefixed rather than spelling the brand out — `TrackMyUsageUsage` is
+indefensible, and the brand already contains the word. The full name lives where people
+actually meet it: the binaries, the bundles, the domain.
 
 Pure SPM — there is **no Xcode project**. Both `.app` bundles are assembled by hand in
 `scripts/build-app.sh` and `scripts/build-link.sh`, so a new Info.plist key, entitlement,
@@ -63,8 +67,19 @@ Changing any of them breaks a working install in a way that produces no error me
 | `~/Library/Application Support/Claudruple/<Name>` | **Compiled into each clone's launcher shim** — `create-instance.sh` passes it as `-DUSER_DATA_DIR` to `clang`. `InstanceLocator.profileURL` must stay in lockstep. Move this directory and every instance boots a fresh, signed-out profile. |
 | `com.claudruple.usage` (keychain service) | Kept **readable** forever as a fallback so an existing install's provider tokens still resolve after the rename. New writes go to the new service. |
 
-If you are renaming things and one of these is in your way: stop, and route it through
-`LegacyNames` instead. CI greps for stray occurrences and that file is the only exemption.
+The first three live in `Sources/TMUKit/LegacyNames.swift`; the keychain service is
+`KeychainCredentials.legacyService`, kept in `TMUProviders` because that target depends on
+nothing and importing TMUKit for a string would trade that away.
+
+If you are renaming things and one of these is in your way: stop, and route it through those
+constants. `scripts/check-frozen-names.sh` runs in CI and fails on any occurrence that is not
+a known frozen form — so a new one has to be justified rather than merely typed.
+
+**This is not hypothetical.** The rebrand broke two of these on its first attempt. The
+substitution protected each frozen string wherever it appeared as contiguous text, and could
+not see the two the code assembled from parts — `"\(prefix).claudruple."` and an
+`appendingPathComponent("Claudruple")`. Nothing about the diff looked wrong. Three tests
+failed, which is the only reason it was caught.
 
 ## Invariants
 
@@ -98,7 +113,7 @@ a comment naming the failure it prevents. Keep both habits — they are why this
 readable.
 
 Fixtures are inline string literals, recorded from real responses and annotated with the date.
-`Tests/ClaudrupleUsageTests/ProviderConformance.swift` is a shared harness every adapter test
+`Tests/TMUProvidersTests/ProviderConformance.swift` is a shared harness every adapter test
 calls before its own specifics; it checks, among other things, that the secret never appears
 in a request URL.
 

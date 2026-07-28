@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build Claudruple.app — the menu bar app.
+# Build TrackMyUsage.app — the menu bar app.
 #
 # SPM produces a bare executable; MenuBarExtra, notifications and window restoration all
 # need a real bundle with an Info.plist, so it is assembled here rather than adding an
@@ -10,16 +10,16 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${OUT:-$ROOT/build}"
 IDENTITY="${IDENTITY:--}"
 
-APP="$OUT/Claudruple.app"
-NAME="Claudruple"
-BUNDLE_ID="com.claudruple.app"
+APP="$OUT/TrackMyUsage.app"
+NAME="TrackMyUsage"
+BUNDLE_ID="com.trackmyusage.app"
 
 echo "==> building"
-( cd "$ROOT" && swift build -c release --product ClaudrupleApp )
+( cd "$ROOT" && swift build -c release --product TMUApp )
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$ROOT/.build/release/ClaudrupleApp" "$APP/Contents/MacOS/$NAME"
+cp "$ROOT/.build/release/TMUApp" "$APP/Contents/MacOS/$NAME"
 
 echo "==> writing Info.plist"
 cat > "$APP/Contents/Info.plist" <<PLIST

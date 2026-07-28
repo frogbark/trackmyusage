@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import ClaudrupleKit
+@testable import TMUKit
 
 /// The planner turns "what the manifest says" plus "what an instance actually has" into
 /// an explicit list of actions. It is deliberately pure: no filesystem, no side effects,
