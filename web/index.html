@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrackMyUsage — situational awareness for every meter you're burning</title>
+<meta name="description" content="Run multiple Claude Desktop accounts on one Mac, and see what your whole dev stack is costing you. Open source, macOS, no credentials leave your keychain.">
+<link rel="icon" href="mark.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wrap">
+    <nav>
+        <img src="mark.svg" alt="">
+        <span class="name">TrackMyUsage</span>
+        <span class="links">
+            <a href="#providers">Providers</a>
+            <a href="https://github.com/frogbark/trackmyusage#readme">Docs</a>
+            <a href="https://github.com/frogbark/trackmyusage">GitHub ↗</a>
+        </span>
+    </nav>
+
+    <header>
+        <h1>Situational awareness for every meter you're burning</h1>
+        <p class="sub">
+            Run multiple Claude Desktop accounts on one Mac — properly, with real app
+            identities rather than a wrapper. Then see every account's limit, and the rest of
+            your stack's, in the menu bar and painted onto your wallpaper.
+        </p>
+        <div class="cta">
+            <code class="install">brew install trackmyusage</code>
+            <a class="button" href="https://github.com/frogbark/trackmyusage#usage">Get started</a>
+        </div>
+        <p class="caption">
+            <span>Apache-2.0</span>
+            <span>macOS 13+</span>
+            <span>Apple Silicon</span>
+            <span>no credentials leave your keychain</span>
+        </p>
+    </header>
+
+    <section>
+        <h2>Why it exists</h2>
+        <div class="pillars">
+            <div class="card">
+                <h3>Real instances, not wrappers</h3>
+                <p>
+                    A separate app bundle per account, re-signed with its own identity. The
+                    usual trick — one binary, a different <code>--user-data-dir</code> —
+                    separates the data but not the identity, and macOS keys sign-in and
+                    OAuth callbacks on identity.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Honest numbers</h3>
+                <p>
+                    Claude already records its own plan utilisation. TrackMyUsage reads the
+                    same figures the app does, for every account at once, rather than
+                    estimating from token logs. A reading older than half an hour is marked,
+                    not shown as current.
+                </p>
+            </div>
+            <div class="card">
+                <h3>Ambient by design</h3>
+                <p>
+                    When everything is under 80% the wallpaper panel dims to a whisper. When
+                    something is hot it grows, brightens and leads with the offender. Silence
+                    is information too.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section id="providers">
+        <h2>Providers</h2>
+        <p class="counts" id="counts">Loading…</p>
+        <div class="matrix" id="matrix"></div>
+        <p class="counts" style="margin-top:22px">
+            Adapters are absent rather than stubbed. A parser written from a remembered API
+            shape is indistinguishable from a correct one until it reports the wrong number,
+            so each one is written against a real recorded response.
+        </p>
+    </section>
+
+    <footer>
+        <p>
+            Prior art, gratefully: <a href="https://github.com/ryoppippi/ccusage">ccusage</a>,
+            <a href="https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor">Claude Code Usage Monitor</a>,
+            and <a href="https://github.com/snipeship/ccflare">ccflare</a> walked this ground first.
+        </p>
+        <p>
+            TrackMyUsage never bundles or redistributes Claude Desktop, and each instance
+            still requires its own paid Anthropic account.
+        </p>
+    </footer>
+</div>
+
+<script>
+// The matrix is rendered from providers.json, which is generated from ProviderRegistry and
+// checked in CI. A hand-written table here would go stale the first time an adapter landed,
+// and a page overstating coverage is exactly what this project argues against.
+fetch('providers.json')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('counts').textContent =
+            `${data.built} built · ${data.blocked} blocked · ${data.planned} planned — of ${data.total} intended`;
+
+        document.getElementById('matrix').innerHTML = data.providers.map(p => `
+            <div class="provider ${p.status}">
+                <span class="dot ${p.status}"></span>
+                <span>${p.id}</span>
+                ${p.note ? `<span class="note">${p.note}</span>` : ''}
+            </div>`).join('');
+    })
+    .catch(() => {
+        document.getElementById('counts').textContent =
+            'Provider list unavailable — see the repository.';
+    });
+</script>
+
+</body>
+</html>

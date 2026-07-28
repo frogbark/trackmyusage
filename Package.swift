@@ -59,7 +59,7 @@ let package = Package(
                 "TMUDesktop", "TMURender", "TMUProviders",
                 "TMUClaude", "TMUKit",
             ]),
-        .executableTarget(name: "tmu", dependencies: ["TMUKit", "TMUProviders"]),
+        .executableTarget(name: "tmu", dependencies: ["TMUKit", "TMUProviders", "TMUDesign"]),
         // The app, minus its @main and its Scenes. Splitting the library out is what makes
         // any of it testable: an executable target cannot be @testable imported cleanly, and
         // everything worth testing here is view-model logic anyway.

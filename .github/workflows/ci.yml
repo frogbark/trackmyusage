@@ -83,6 +83,12 @@ jobs:
       - name: Frozen names
         run: ./scripts/check-frozen-names.sh
 
+      # The provider matrix and brand assets are generated from the code. This is the check
+      # that makes the counts on trackmyusage.dev structurally unable to overstate what
+      # actually ships.
+      - name: Generated files are current
+        run: ./scripts/check-generated.sh
+
   portability:
     name: Provider SDK builds without a platform
     # Package.swift says the usage layer must build where Claude Desktop does not exist.

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing — TrackMyUsage</title>
+<meta name="description" content="The tracker is free and open source. The analyst is $49.">
+<!-- Deliberately not linked from the nav yet. Pro is not built: the licence check, the
+     insights and the payment path are all still to come, and a page with a working trial
+     button that leads nowhere is a promise the product cannot keep — on a site whose whole
+     argument is that its numbers are honest. Link it when Pro ships. -->
+<meta name="robots" content="noindex">
+<link rel="icon" href="mark.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wrap">
+    <nav>
+        <img src="mark.svg" alt="">
+        <span class="name">TrackMyUsage</span>
+        <span class="links">
+            <a href="index.html">Home</a>
+            <a href="https://github.com/frogbark/trackmyusage">GitHub ↗</a>
+        </span>
+    </nav>
+
+    <header>
+        <h1>The tracker is free. The analyst is $49.</h1>
+        <p class="sub">
+            Infrastructure is free, and the truth is never gated. A monitor that hides your
+            own numbers behind a paywall cannot be trusted as a monitor — so every raw
+            reading, every limit and every notification is in the open-source core, forever.
+        </p>
+    </header>
+
+    <section>
+        <div class="plans">
+            <div class="plan">
+                <div class="price">$0</div>
+                <div class="term">forever · Apache-2.0</div>
+                <ul>
+                    <li>Multiple Claude Desktop accounts, properly isolated</li>
+                    <li>Deep-link broker and config sync</li>
+                    <li>Every provider adapter</li>
+                    <li>Menu bar, notifications, steering</li>
+                    <li>Wallpaper — every layout and state</li>
+                    <li>Renewal dates and Claude Code tracking</li>
+                    <li>CLI, local API, SQLite export</li>
+                    <li>30 days of history</li>
+                </ul>
+            </div>
+
+            <div class="plan pro">
+                <div class="price">$49<span class="badge">Pro</span></div>
+                <div class="term">per year, or $99 once</div>
+                <ul>
+                    <li>Waste detection — what you pay for and do not use</li>
+                    <li>Budgets for uncapped dollar meters</li>
+                    <li>Spike alarms — a leaked key looks exactly like a spike</li>
+                    <li>Hooks that act on thresholds</li>
+                    <li>Cost forecasting and annual-plan arbitrage</li>
+                    <li>Unlimited history and a weekly digest</li>
+                    <li>iOS app, widgets and Watch complications</li>
+                </ul>
+                <p class="counts" style="margin-top:22px">
+                    Not available yet. <a href="https://github.com/frogbark/trackmyusage">Watch
+                    the repository</a> and it will be announced there.
+                </p>
+            </div>
+        </div>
+
+        <p class="counts" style="margin-top:26px">
+            One licence covers all your devices. Pro checks a signed licence file; the daemon
+            never phones home with your usage.
+        </p>
+    </section>
+
+    <footer>
+        <p><a href="index.html">← Back</a></p>
+    </footer>
+</div>
+
+</body>
+</html>

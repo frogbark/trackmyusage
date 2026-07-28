@@ -7,8 +7,10 @@ Dock. A small broker makes sure sign-in and MCP OAuth callbacks reach the accoun
 asked for them, instead of whichever instance happened to launch last.
 
 > **Status: early.** Instances, deep-link routing, config sync, usage tracking, steering,
-> the menu bar app and the usage wallpaper all work and are in daily use. Four of seventeen
-> provider integrations are built — see [`docs/roadmap.md`](docs/roadmap.md).
+> the menu bar app and the usage wallpaper all work and are in daily use. Five of seventeen
+> provider integrations are built, two more have no public usage endpoint to build against,
+> and the remaining ten are planned — see [`docs/roadmap.md`](docs/roadmap.md). The Pro tier
+> described on the website is **not built**; nothing in this repository charges for anything.
 
 TrackMyUsage never bundles or redistributes Claude Desktop. It clones the copy already
 installed on your machine, leaves `app.asar` byte-for-byte untouched, and never handles
@@ -150,10 +152,26 @@ swift build -c release
 .build/release/tmud apply     # write it and set it as the wallpaper
 ```
 
-Composites every account's binding limit onto the desktop background. The pipeline is
-snapshots → SVG → raster → desktop, and the whole visual design is a pure function from
-snapshots to SVG text — so a layout regression fails in `swift test` rather than appearing
-on your screen.
+Composites every account's limit, and every service's, onto the desktop background. Three
+layouts, chosen per display:
+
+| `--layout` | |
+|---|---|
+| `ledger` | a left rail naming every provider, with sparklines and a renewals line |
+| `board` | tiles across the bottom of a wide desktop; falls back to the rail if the display is too narrow |
+| `card` | a corner card: four named, the rest as bare bars, over a 30-day renewal axis |
+
+The card is also the one that changes with the weather. When everything is under 80% it dims
+to a whisper and stops enumerating — two accounts and one line confirming the rest was
+checked. When something is hot it grows, brightens and leads with the offender. Silence is
+information too.
+
+Set a layout per display in `~/Library/Application Support/TrackMyUsage/settings.json`; a
+laptop beside a large monitor usually wants `card` on one and `ledger` on the other.
+
+The pipeline is snapshots → model → SVG → raster → desktop, and everything up to the raster
+is a pure function — so a layout regression fails in `swift test` rather than appearing on
+your screen.
 
 Providers are fetched concurrently: seventeen adapters each allowed fifteen seconds would
 stall a serial render for four minutes, where in parallel the slowest one sets the cost. A

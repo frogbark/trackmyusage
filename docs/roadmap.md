@@ -22,7 +22,11 @@ TrackMyUsage Link.app     deep-link broker
 | Claude usage, forecasting, steering | **working** |
 | Menu bar app | **working** |
 | Usage wallpaper | **working** |
-| Provider adapters | 4 of 17 |
+| Provider adapters | 5 built · 2 blocked · 10 planned |
+| Wallpaper layouts | ledger, board, card + quiet/alert |
+| Menu bar and instances window | **working** |
+| Rename migration | **working** |
+| Website | **working** |
 | Codex Desktop | assessed, not started |
 | Release | not started |
 
