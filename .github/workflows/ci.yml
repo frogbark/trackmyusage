@@ -1,0 +1,85 @@
+# Build, test and lint.
+#
+# Two jobs, and the split is the point:
+#
+#   verify      — the real gate. Must run on macOS.
+#   portability — proves the claim Package.swift makes about the provider SDK.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Tests pin a fixed clock but format dates through the current calendar; UTC keeps a
+  # runner in another zone from disagreeing with a laptop.
+  TZ: UTC
+
+jobs:
+  verify:
+    name: Build, test, lint
+    # macOS is required, not preferred: AppKit (rasterising, NSWorkspace), Security
+    # (keychain), and NSImage's SVG decoder all live here.
+    #
+    # Deliberately NOT `vars.CI_RUNNER` — that variable is the org-wide escape hatch and
+    # its documented value is `ubuntu-latest`. Sharing it would let a change made for the
+    # TypeScript repos silently route this one to a platform it cannot build on, and the
+    # failure would look like a code problem rather than a routing one. Separate name,
+    # macOS-only default, and an explicit assertion below.
+    runs-on: ${{ vars.CI_RUNNER_MACOS || 'macos-15' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Assert the runner is macOS
+        # If CI_RUNNER_MACOS is ever pointed somewhere else, fail here with a sentence
+        # that says why, rather than 200 lines of "cannot find type 'NSImage' in scope".
+        run: |
+          [ "$RUNNER_OS" = "macOS" ] || {
+            echo "::error::This repo must build on macOS (AppKit, Security, NSImage SVG)."
+            echo "::error::Runner was '$RUNNER_OS'. Check the CI_RUNNER_MACOS variable."
+            exit 1
+          }
+          swift --version
+
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: swift test
+
+      # build-app.sh and build-link.sh ship release builds; a debug-only gate would let
+      # an optimiser-sensitive break reach the .app bundles.
+      - name: Build (release)
+        run: swift build -c release
+
+      - name: Lint
+        # `swift format` is a toolchain subcommand as of Swift 6 — nothing to install.
+        run: swift format lint --strict --recursive Sources Tests
+
+  portability:
+    name: Provider SDK builds without a platform
+    # Package.swift says the usage layer must build where Claude Desktop does not exist.
+    # That claim has never been checked. This job is the check.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: swift:6.0
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the platform-neutral targets
+        run: swift build --target ClaudrupleUsage
