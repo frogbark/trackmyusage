@@ -25,7 +25,12 @@ let package = Package(
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.0.0")
     ],
     targets: [
-        .target(name: "TMUKit", dependencies: ["Yams"]),
+        // The palette, the ok/warn/over classification, and the numbers behind them.
+        // Depends on nothing, for the same reason TMUProviders does: SwiftUI adapts at the
+        // consumer (a Color extension in the app), so this stays buildable anywhere and the
+        // SVG renderer keeps emitting plain hex as presentation attributes.
+        .target(name: "TMUDesign"),
+        .target(name: "TMUKit", dependencies: ["Yams", "TMUDesign"]),
         // Deliberately depends on nothing. TMUKit is macOS-bound — InstanceLocator
         // reads /Applications, SyncApplier imports Darwin — and the usage layer has to
         // build on Linux and Windows, where the wallpaper runs but Claude Desktop does not
@@ -39,7 +44,7 @@ let package = Package(
         // Text in, text out. Producing SVG rather than pixels keeps the whole visual
         // design a pure function that diffs in a golden-file test, and leaves rasterising
         // as the only part that needs a platform.
-        .target(name: "TMURender", dependencies: ["TMUProviders"]),
+        .target(name: "TMURender", dependencies: ["TMUProviders", "TMUDesign"]),
         // Reading and writing the desktop background is the one genuinely per-OS piece:
         // NSWorkspace here, a per-desktop-environment shell-out on Linux, and
         // SystemParametersInfoW on Windows.
@@ -54,7 +59,8 @@ let package = Package(
         .executableTarget(name: "tmu", dependencies: ["TMUKit", "TMUProviders"]),
         // TMUProviders is here for the keychain service names the migration needs. The
         // provider snapshots themselves are not wired into the app yet.
-        .executableTarget(name: "TMUApp", dependencies: ["TMUKit", "TMUProviders"]),
+        .executableTarget(name: "TMUApp", dependencies: ["TMUKit", "TMUProviders", "TMUDesign"]),
+        .testTarget(name: "TMUDesignTests", dependencies: ["TMUDesign"]),
         .testTarget(name: "TMUKitTests", dependencies: ["TMUKit"]),
         .testTarget(name: "TMUProvidersTests", dependencies: ["TMUProviders"]),
         .testTarget(

@@ -1,4 +1,5 @@
 import Foundation
+import TMUDesign
 
 /// One account's usage, paired with the instance that holds it.
 public struct AccountUsage: Sendable, Equatable {
@@ -61,19 +62,25 @@ public struct SteeringAdvice: Sendable, Equatable {
 public enum Steering {
 
     public struct Thresholds: Sendable {
-        /// Warn from here up.
-        public var approaching: Double = 80
+        /// Warn from here up. Shared with the wallpaper and the notifications, so all three
+        /// agree about what "approaching" means.
+        public var approaching: Double = TMUDesign.Thresholds.warn
         /// Nothing left.
-        public var exhausted: Double = 100
+        public var exhausted: Double = TMUDesign.Thresholds.over
         /// Extra headroom an alternative must offer before it is worth moving.
         ///
         /// Without this the tool oscillates between two nearly-full accounts, suggesting a
         /// move for four points of advantage. Advice that fires constantly gets muted, and
         /// a muted tool cannot warn about anything.
         public var switchMargin: Double = 15
-        /// How old a reading may be and still support a recommendation. An account last
+        /// How old a reading may be and still support a *recommendation*. An account last
         /// seen two days ago may have been consumed since.
-        public var freshness: TimeInterval = 6 * 3600
+        ///
+        /// Deliberately not `TMUDesign.Thresholds.staleAfter` (30 min). That one decides
+        /// whether to mark a number as stale on screen; this one decides whether an account
+        /// is a credible place to send someone. A reading two hours old is worth showing
+        /// with a caveat and still worth switching to.
+        public var recommendationHorizon: TimeInterval = 6 * 3600
 
         public init() {}
     }
@@ -104,7 +111,7 @@ public enum Steering {
         let best =
             accounts
             .filter { $0.instanceName != activeInstance }
-            .filter { $0.isFresh(now: now, limit: thresholds.freshness) }
+            .filter { $0.isFresh(now: now, limit: thresholds.recommendationHorizon) }
             .max { $0.headroom(now: now) < $1.headroom(now: now) }
 
         var recommended: String?
