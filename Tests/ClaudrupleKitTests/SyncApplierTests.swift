@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleKit
 
 /// The applier is the only component that writes, so its failure modes are pinned down
@@ -30,7 +31,8 @@ final class SyncApplierTests: XCTestCase {
 
     @discardableResult
     private func plant(_ id: String, in profile: URL, settings: String? = nil) throws -> URL {
-        let dir = profile
+        let dir =
+            profile
             .appendingPathComponent(ProfileReader.extensionsDirectory)
             .appendingPathComponent(id)
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -57,8 +59,8 @@ final class SyncApplierTests: XCTestCase {
     private func registryIDs(in profile: URL) throws -> Set<String> {
         let url = profile.appendingPathComponent(SyncApplier.registryFile)
         guard let data = fm.contents(atPath: url.path),
-              let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let exts = root["extensions"] as? [String: Any]
+            let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let exts = root["extensions"] as? [String: Any]
         else { return [] }
         return Set(exts.keys)
     }
@@ -116,7 +118,8 @@ final class SyncApplierTests: XCTestCase {
         XCTAssertTrue(
             fm.fileExists(
                 atPath: target.appendingPathComponent(
-                    "\(ProfileReader.extensionsDirectory)/ext.a/manifest.json").path))
+                    "\(ProfileReader.extensionsDirectory)/ext.a/manifest.json"
+                ).path))
     }
 
     func testMergesRegistryEntryPreservingExistingOnes() throws {
@@ -223,7 +226,8 @@ final class SyncApplierTests: XCTestCase {
         XCTAssertTrue(
             fm.fileExists(
                 atPath: backup.appendingPathComponent(
-                    "\(ProfileReader.extensionsDirectory)/ext.gone").path))
+                    "\(ProfileReader.extensionsDirectory)/ext.gone"
+                ).path))
     }
 
     func testBackupsGoWhereTheyAreToldAndNowhereElse() throws {

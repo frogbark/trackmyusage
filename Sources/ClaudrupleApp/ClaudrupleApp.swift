@@ -12,8 +12,9 @@ struct ClaudrupleApp: App {
             MenuContent(store: store)
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: store.summary.isCritical
-                    ? "exclamationmark.triangle.fill" : "gauge.medium")
+                Image(
+                    systemName: store.summary.isCritical
+                        ? "exclamationmark.triangle.fill" : "gauge.medium")
                 Text(store.summary.title)
             }
         }
@@ -123,9 +124,11 @@ struct AdviceBanner: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: advice.urgency == .exhausted
-                ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill")
-                .foregroundStyle(advice.urgency == .exhausted ? .red : .orange)
+            Image(
+                systemName: advice.urgency == .exhausted
+                    ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill"
+            )
+            .foregroundStyle(advice.urgency == .exhausted ? .red : .orange)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(advice.reason).font(.callout).fixedSize(horizontal: false, vertical: true)
@@ -133,7 +136,8 @@ struct AdviceBanner: View {
                 // Switching is offered, never performed unprompted: rearranging someone's
                 // windows mid-task is how a helpful tool becomes an annoying one.
                 if let target = advice.recommended,
-                   let row = store.rows.first(where: { $0.name == target }) {
+                    let row = store.rows.first(where: { $0.name == target })
+                {
                     Button("Switch to \(target)") { store.activate(row.instance) }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)

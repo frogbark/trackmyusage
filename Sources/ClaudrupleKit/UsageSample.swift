@@ -70,7 +70,7 @@ public enum UsageMetric: Hashable, Sendable {
         switch self {
         case .fiveHour: return 5 * 3600
         case .sevenDay, .sevenDayOpus, .sevenDaySonnet, .sevenDayCowork,
-             .sevenDayOAuthApps, .sevenDayOmelette, .omellettePromotional:
+            .sevenDayOAuthApps, .sevenDayOmelette, .omellettePromotional:
             return 7 * 24 * 3600
         case .extraUsage, .unknown: return nil
         }
@@ -137,7 +137,7 @@ public struct UsageHistory: Sendable, Equatable {
 
     public static func parse(_ data: Data) throws -> UsageHistory {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let raw = root["samples"] as? [[String: Any]]
+            let raw = root["samples"] as? [[String: Any]]
         else { throw UsageError.unreadable("expected an object with a `samples` array") }
 
         let version = root["version"] as? Int ?? 2

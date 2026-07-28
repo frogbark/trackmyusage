@@ -101,7 +101,8 @@ public enum Steering {
 
         // Rank only accounts that are not the active one and whose readings are recent
         // enough to trust.
-        let best = accounts
+        let best =
+            accounts
             .filter { $0.instanceName != activeInstance }
             .filter { $0.isFresh(now: now, limit: thresholds.freshness) }
             .max { $0.headroom(now: now) < $1.headroom(now: now) }

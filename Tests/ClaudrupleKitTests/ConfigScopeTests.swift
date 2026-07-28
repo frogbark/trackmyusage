@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleKit
 
 /// Sync copies configuration between instances that belong to *different accounts*.

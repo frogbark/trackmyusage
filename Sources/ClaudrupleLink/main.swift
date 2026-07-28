@@ -161,11 +161,13 @@ final class Router {
     func deliver(_ url: URL, to instance: ClaudeInstance) {
         let cfg = NSWorkspace.OpenConfiguration()
         cfg.activates = true
-        NSWorkspace.shared.open([url], withApplicationAt: instance.url, configuration: cfg) { _, err in
+        NSWorkspace.shared.open([url], withApplicationAt: instance.url, configuration: cfg) {
+            _, err in
             if let err {
                 Log.write("delivery to \(instance.bundleID) failed: \(err.localizedDescription)")
             } else {
-                Log.write("routed \(url.scheme ?? "?")://\(url.host ?? "") -> \(instance.displayName)")
+                Log.write(
+                    "routed \(url.scheme ?? "?")://\(url.host ?? "") -> \(instance.displayName)")
             }
         }
     }
@@ -187,8 +189,8 @@ enum SchemeOwnership {
         guard let me = Bundle.main.bundleIdentifier else { return false }
         return brokeredSchemes.allSatisfy { scheme in
             guard let u = URL(string: "\(scheme)://probe"),
-                  let app = NSWorkspace.shared.urlForApplication(toOpen: u),
-                  let id = Bundle(url: app)?.bundleIdentifier
+                let app = NSWorkspace.shared.urlForApplication(toOpen: u),
+                let id = Bundle(url: app)?.bundleIdentifier
             else { return false }
             return id == me
         }
@@ -231,10 +233,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.write("started; GetURL handler installed")
     }
 
-    @objc private func handleGetURL(_ event: NSAppleEventDescriptor,
-                                    withReplyEvent reply: NSAppleEventDescriptor) {
+    @objc private func handleGetURL(
+        _ event: NSAppleEventDescriptor,
+        withReplyEvent reply: NSAppleEventDescriptor
+    ) {
         guard let s = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
-              let url = URL(string: s)
+            let url = URL(string: s)
         else {
             Log.write("GetURL event carried no usable URL")
             return
@@ -252,8 +256,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ws.addObserver(
             forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main
         ) { note in
-            guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                  let id = app.bundleIdentifier, id.hasPrefix(claudeBundlePrefix)
+            guard
+                let app = note.userInfo?[NSWorkspace.applicationUserInfoKey]
+                    as? NSRunningApplication,
+                let id = app.bundleIdentifier, id.hasPrefix(claudeBundlePrefix)
             else { return }
             Self.reassertBurst(trigger: id)
         }
@@ -275,10 +281,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func route(_ urls: [URL]) {
         let instances = InstanceRegistry.installed()
-        Log.write("routing \(urls.count) url(s); \(instances.count) instance(s) known: "
-            + instances.map(\.displayName).joined(separator: ", "))
+        Log.write(
+            "routing \(urls.count) url(s); \(instances.count) instance(s) known: "
+                + instances.map(\.displayName).joined(separator: ", "))
         guard let target = router.target(among: instances) else {
-            Log.write("no target instance; dropping \(urls.map(\.absoluteString).joined(separator: " "))")
+            Log.write(
+                "no target instance; dropping \(urls.map(\.absoluteString).joined(separator: " "))")
             return
         }
         for url in urls { router.deliver(url, to: target) }

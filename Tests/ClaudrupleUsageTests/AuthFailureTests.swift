@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleUsage
 
 /// How a rejected credential is reported.

@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleKit
 
 /// The manifest is the artifact people commit and share, so parsing it is held to the
@@ -8,7 +9,8 @@ final class ManifestTests: XCTestCase {
     // MARK: - Basics
 
     func testParsesInstancesAndExtensions() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Work
@@ -26,7 +28,8 @@ final class ManifestTests: XCTestCase {
     }
 
     func testPolicyDefaultsToAdditive() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Work
@@ -36,7 +39,8 @@ final class ManifestTests: XCTestCase {
     }
 
     func testPolicyCanBeDeclaredExplicitly() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Work
@@ -48,7 +52,8 @@ final class ManifestTests: XCTestCase {
     }
 
     func testKeepListIsParsed() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Personal
@@ -59,7 +64,8 @@ final class ManifestTests: XCTestCase {
     }
 
     func testMissingExtensionsKeyIsAnEmptyList() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Bare
@@ -71,7 +77,8 @@ final class ManifestTests: XCTestCase {
     // MARK: - Inheritance
 
     func testInheritsUnionsParentExtensions() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Work
@@ -86,7 +93,8 @@ final class ManifestTests: XCTestCase {
     }
 
     func testInheritsUnionsKeepLists() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Work
@@ -100,7 +108,8 @@ final class ManifestTests: XCTestCase {
     }
 
     func testInheritedDuplicatesAreCollapsed() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Work
@@ -116,7 +125,8 @@ final class ManifestTests: XCTestCase {
     func testChildDoesNotInheritParentPolicy() throws {
         // Policy is a per-instance safety decision. Inheriting `exact` silently would let
         // a parent make a child destructive without the child's author noticing.
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Work
@@ -129,7 +139,8 @@ final class ManifestTests: XCTestCase {
     }
 
     func testMultiLevelInheritanceResolves() throws {
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Base
@@ -147,7 +158,8 @@ final class ManifestTests: XCTestCase {
 
     func testForwardReferenceInInheritsResolves() throws {
         // Declaration order should not matter; a manifest is a set, not a sequence.
-        let m = try Manifest.parse("""
+        let m = try Manifest.parse(
+            """
             version: 1
             instances:
               - name: Personal

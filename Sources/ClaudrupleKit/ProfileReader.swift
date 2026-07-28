@@ -58,7 +58,7 @@ public enum ProfileReader {
         // would let a corrupt profile look like a clean one, and sync would then report
         // nothing to do — the most misleading answer available.
         guard let object = try? JSONSerialization.jsonObject(with: data),
-              let dict = object as? [String: Any]
+            let dict = object as? [String: Any]
         else { throw ProfileError.unreadableConfig(path: file.path) }
 
         return Set(dict.keys)

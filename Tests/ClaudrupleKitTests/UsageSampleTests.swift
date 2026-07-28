@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleKit
 
 /// Parsing `plan-usage-history.json`.
@@ -47,7 +48,8 @@ final class UsageSampleTests: XCTestCase {
     // MARK: - Schema v2
 
     func testParsesVersion2Samples() throws {
-        let history = try UsageHistory.parse(#"""
+        let history = try UsageHistory.parse(
+            #"""
             {"version":2,"samples":[
               {"t":1784969883372,"org":"8339cad5","u":{"fh":19,"sd":100}}
             ]}
@@ -69,7 +71,8 @@ final class UsageSampleTests: XCTestCase {
     }
 
     func testNullOrgIsAllowed() throws {
-        let history = try UsageHistory.parse(#"{"version":2,"samples":[{"t":1,"org":null,"u":{}}]}"#)
+        let history = try UsageHistory.parse(
+            #"{"version":2,"samples":[{"t":1,"org":null,"u":{}}]}"#)
         XCTAssertNil(history.samples[0].org)
     }
 
@@ -78,7 +81,8 @@ final class UsageSampleTests: XCTestCase {
     func testParsesVersion1AndMigratesFlatFields() throws {
         // v1 was {t, fh, sd} with nullable fields and no org. The app migrates it, so a
         // history file predating v2 must still be readable.
-        let history = try UsageHistory.parse(#"""
+        let history = try UsageHistory.parse(
+            #"""
             {"version":1,"samples":[{"t":1784969883372,"fh":12,"sd":null}]}
             """#)
 
@@ -99,7 +103,8 @@ final class UsageSampleTests: XCTestCase {
     }
 
     func testSamplesAreReturnedInChronologicalOrder() throws {
-        let history = try UsageHistory.parse(#"""
+        let history = try UsageHistory.parse(
+            #"""
             {"version":2,"samples":[{"t":3000,"u":{}},{"t":1000,"u":{}},{"t":2000,"u":{}}]}
             """#)
         XCTAssertEqual(history.samples.map(\.timestamp.timeIntervalSince1970), [1, 2, 3])

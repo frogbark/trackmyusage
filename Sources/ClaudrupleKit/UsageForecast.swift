@@ -77,7 +77,7 @@ extension UsageHistory {
         for reading in readings.reversed() {
             if reading.0 < cutoff { break }
             if let p = previous, reading.1 > p { break }  // walking back: a higher earlier
-            run.append(reading)                            // value means a reset followed
+            run.append(reading)  // value means a reset followed
             previous = reading.1
         }
         return run.reversed()

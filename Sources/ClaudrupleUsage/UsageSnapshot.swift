@@ -44,7 +44,8 @@ public struct UsageSnapshot: Sendable, Equatable {
     /// and be announced as the thing about to run out.
     public var binding: Metric? {
         guard isReporting else { return nil }
-        return metrics
+        return
+            metrics
             .filter { $0.utilization != nil }
             .max { ($0.utilization ?? 0) < ($1.utilization ?? 0) }
     }

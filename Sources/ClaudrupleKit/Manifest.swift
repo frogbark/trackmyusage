@@ -20,7 +20,8 @@ public enum ManifestError: Error, Equatable, CustomStringConvertible {
         case .notAMapping:
             return "manifest must be a YAML mapping with a top-level `instances:` key"
         case .unsupportedVersion(let v):
-            return "unsupported manifest version \(v); this build understands version \(Manifest.supportedVersion)"
+            return
+                "unsupported manifest version \(v); this build understands version \(Manifest.supportedVersion)"
         case .missingName(let i):
             return "instance at position \(i) has no `name:`"
         case .duplicateInstance(let n):
@@ -83,7 +84,7 @@ public struct Manifest: Sendable, Equatable {
 
         for (i, entry) in list.enumerated() {
             guard let dict = entry as? [String: Any],
-                  let name = dict["name"] as? String, !name.isEmpty
+                let name = dict["name"] as? String, !name.isEmpty
             else { throw ManifestError.missingName(index: i) }
 
             guard seen.insert(name).inserted else {

@@ -36,8 +36,10 @@ public struct AppKitDesktop: Desktop {
             // size from being letterboxed by a stale fill setting.
             try NSWorkspace.shared.setDesktopImageURL(
                 url, for: screen,
-                options: [.imageScaling: NSImageScaling.scaleProportionallyUpOrDown.rawValue,
-                    .allowClipping: true])
+                options: [
+                    .imageScaling: NSImageScaling.scaleProportionallyUpOrDown.rawValue,
+                    .allowClipping: true,
+                ])
         } catch {
             throw DesktopError.couldNotSet("\(error)")
         }

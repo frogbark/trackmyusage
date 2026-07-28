@@ -12,10 +12,12 @@ struct InstancesView: View {
                     Image(systemName: "square.stack.3d.up.slash")
                         .font(.largeTitle).foregroundStyle(.secondary)
                     Text("No instances found").font(.headline)
-                    Text("Create one with `claudruple`, or check that Claude Desktop is "
-                        + "installed at /Applications/Claude.app.")
-                        .font(.callout).foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                    Text(
+                        "Create one with `claudruple`, or check that Claude Desktop is "
+                            + "installed at /Applications/Claude.app."
+                    )
+                    .font(.callout).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
                 }
                 .padding(40)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

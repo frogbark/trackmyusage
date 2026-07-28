@@ -26,7 +26,8 @@ func usage() {
 }
 
 func outputDirectory() -> URL {
-    let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+    let caches =
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
         ?? URL(fileURLWithPath: NSTemporaryDirectory())
     return caches.appendingPathComponent("Claudruple/wallpaper", isDirectory: true)
 }
@@ -141,7 +142,9 @@ func describe(_ snapshots: [UsageSnapshot]) {
         let account = snapshot.account.map { " (\($0))" } ?? ""
         guard snapshot.isReporting else {
             let reason: String
-            if case .unavailable(let detail) = snapshot.status { reason = detail } else {
+            if case .unavailable(let detail) = snapshot.status {
+                reason = detail
+            } else {
                 reason = "unauthorized"
             }
             print("  \(snapshot.provider)\(account)   — \(reason)")

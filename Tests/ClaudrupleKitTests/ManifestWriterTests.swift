@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleKit
 
 final class ManifestWriterTests: XCTestCase {

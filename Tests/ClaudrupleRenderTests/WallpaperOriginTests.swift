@@ -57,7 +57,8 @@ final class WallpaperOriginTests: XCTestCase {
         // "/…/Claudruple/wallpaper-backups" begins with the output path as a *string* but
         // is a different directory. Comparing path components rather than characters is
         // what stops a real photo from being mistaken for our own output and discarded.
-        let neighbour = URL(fileURLWithPath: "/Users/x/Library/Caches/Claudruple/wallpaper-backups/lake.jpg")
+        let neighbour = URL(
+            fileURLWithPath: "/Users/x/Library/Caches/Claudruple/wallpaper-backups/lake.jpg")
         let origin = origin(current: neighbour, remembered: photo)
 
         XCTAssertEqual(origin, neighbour, "a prefix match is not a containment match")
