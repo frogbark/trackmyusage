@@ -4,6 +4,7 @@ import TMUDesktop
 import TMUKit
 import TMUProviders
 import TMURender
+import TMUTelemetry
 
 // Hand-rolled dispatch, matching `tmu`. The whole surface is three verbs and one
 // flag; a dependency to parse that would be larger than the thing it parses.
@@ -17,12 +18,17 @@ func usage() {
 
         USAGE
           tmud status                 what it would draw, and onto what
-          tmud render [--density D]   write the image, leave the desktop alone
-          tmud apply  [--density D]   write the image and set it as the wallpaper
+          tmud render [--layout L]    write the image, leave the desktop alone
+          tmud apply  [--layout L]    write the image and set it as the wallpaper
+          tmud --migrate              finish a migration whose steps were deferred
 
         OPTIONS
-          --density compact|full   compact: a corner card naming a few providers
-                                   full:    a rail naming every provider (default)
+          --layout ledger|board|card
+                ledger  a left rail naming every provider (default)
+                board   tiles across the bottom of a wide desktop
+                card    a corner card: a few named, the rest as bare bars
+
+          --density compact|full     deprecated; compact -> card, full -> ledger
         """)
 }
 
@@ -92,7 +98,7 @@ struct Rendered {
 }
 
 /// Renders every display and returns where each image landed.
-func renderAll(density: WallpaperDensity, into directory: URL) throws -> [Rendered] {
+func renderAll(layout: WallpaperLayoutID, into directory: URL) throws -> [Rendered] {
     let desktop = try DesktopFactory.current()
     let displays = try desktop.displays()
     let snapshots = collect()
@@ -102,6 +108,20 @@ func renderAll(density: WallpaperDensity, into directory: URL) throws -> [Render
     var state = WallpaperState.load(from: stateFile)
     try FileManager.default.createDirectory(
         at: directory, withIntermediateDirectories: true)
+
+    // Build the model once, here, and record this round before drawing. The daemon owns
+    // every byte of I/O so the renderer stays a pure function of its inputs — which is what
+    // keeps a layout regression failing in `swift test` rather than appearing on a desktop.
+    // `tmud` is the only writer of this file; the app reads it.
+    let historyFile = directory.appendingPathComponent("history.json")
+    var history = RenderHistory.load(from: historyFile)
+    let sampled = TelemetryModel.build(snapshots: snapshots, now: now)
+    history.record(sampled)
+    history.prune(keeping: Set(sampled.services.map(\.name)))
+    try? history.save(to: historyFile)
+
+    let model = TelemetryModel.build(
+        snapshots: snapshots, history: history.byName, now: now)
 
     var results: [Rendered] = []
     for display in displays {
@@ -116,7 +136,7 @@ func renderAll(density: WallpaperDensity, into directory: URL) throws -> [Render
         if let origin { entry.pristine = origin }
 
         let svg = WallpaperSVG.render(
-            snapshots, density: density, canvas: display.canvas, generatedAt: now)
+            model, layout: layout, canvas: display.canvas)
         let png = try AppKitRasterizer().compose(
             svg: svg, over: origin, canvas: display.canvas)
 
@@ -164,16 +184,30 @@ func describe(_ snapshots: [UsageSnapshot]) {
 // MARK: - Dispatch
 
 var arguments = Array(CommandLine.arguments.dropFirst())
-var density = WallpaperDensity.full
+var layout = WallpaperLayoutID.ledger
 
+if let index = arguments.firstIndex(of: "--layout") {
+    guard index + 1 < arguments.count,
+        let parsed = WallpaperLayoutID(rawValue: arguments[index + 1])
+    else {
+        FileHandle.standardError.write(
+            Data("--layout needs ledger, board or card\n".utf8))
+        exit(2)
+    }
+    layout = parsed
+    arguments.removeSubrange(index...(index + 1))
+}
+
+// The previous spelling. Kept working for a release so an existing LaunchAgent plist, which
+// a rebuild does not rewrite, does not start failing on every fire.
 if let index = arguments.firstIndex(of: "--density") {
     guard index + 1 < arguments.count,
-        let parsed = WallpaperDensity(rawValue: arguments[index + 1])
+        let parsed = ["compact": WallpaperLayoutID.card, "full": .ledger][arguments[index + 1]]
     else {
         FileHandle.standardError.write(Data("--density needs compact or full\n".utf8))
         exit(2)
     }
-    density = parsed
+    layout = parsed
     arguments.removeSubrange(index...(index + 1))
 }
 
@@ -219,7 +253,7 @@ do {
         print()
 
     case "render":
-        for rendered in try renderAll(density: density, into: outputDirectory()) {
+        for rendered in try renderAll(layout: layout, into: outputDirectory()) {
             print(
                 "\(rendered.display.name): \(rendered.file.path)  (over "
                     + (rendered.origin?.lastPathComponent ?? "a generated background") + ")")
@@ -227,7 +261,7 @@ do {
 
     case "apply":
         let desktop = try DesktopFactory.current()
-        for rendered in try renderAll(density: density, into: outputDirectory()) {
+        for rendered in try renderAll(layout: layout, into: outputDirectory()) {
             try desktop.setWallpaper(rendered.file, for: rendered.display)
             print("\(rendered.display.name): set")
         }

@@ -97,8 +97,9 @@ final class AppKitRasterizerTests: XCTestCase {
         let png = try AppKitRasterizer().compose(
             svg: overlay, over: background, canvas: canvas)
 
-        // Inside the rail: x 72–472, vertically centred, so (200, 720) lands on the scrim.
-        let scrim = try pixel(png, x: 200, y: 720)
+        // Inside the ledger rail: x 96–616 in design units, starting 240 from the top.
+        // At 2560x1440 the design scale is 1, so (200, 400) lands on the scrim.
+        let scrim = try pixel(png, x: 200, y: 400)
         XCTAssertLessThan(
             scrim.brightnessComponent, 0.6,
             "the scrim has to actually darken, or nothing on it is legible")
