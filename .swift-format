@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "indentation": { "spaces": 4 },
+  "lineLength": 100,
+  "maximumBlankLines": 1,
+  "respectsExistingLineBreaks": true,
+  "lineBreakBeforeEachArgument": false,
+  "indentConditionalCompilationBlocks": false,
+  "reflowMultilineStringLiterals": "never",
+  "rules": {
+    "AllPublicDeclarationsHaveDocumentation": false,
+    "AlwaysUseLowerCamelCase": true,
+    "NeverForceUnwrap": false,
+    "NeverUseForceTry": true,
+    "NoBlockComments": false,
+    "OrderedImports": true,
+    "UseLetInEveryBoundCaseVariable": false,
+    "UseSynthesizedInitializer": false
+  }
+}

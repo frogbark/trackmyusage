@@ -1,0 +1,57 @@
+# Claude PR review — thin caller. The actual logic lives once in the central
+# action repo (frogbark/ci-tools/claude-review); this stub just invokes it.
+# The rollout script (tools/claude-reviewer/rollout.mjs) writes this file to
+# .github/workflows/claude-review.yml in every target repo, rewriting the
+# `uses:` SHA below to the action commit it just pushed. Edit the central action
+# to change review behavior, then re-run the rollout to bump every caller.
+name: Claude review
+
+on:
+  pull_request:
+    # `ready_for_review` fires the first review when a draft is marked ready; the
+    # draft guard below skips runs while the PR is still a draft, so work-in-
+    # progress pushes don't each pay for a review.
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Claude review
+    runs-on: self-hosted
+    timeout-minutes: 10
+    # Skip draft PRs (review once marked ready). Secrets aren't exposed to fork
+    # PRs, so skip those rather than fail.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the base...head merge-base diff resolves
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Pinned to a full commit SHA, never @main: the action receives this
+      # repo's ANTHROPIC_API_KEY and a write-scoped GITHUB_TOKEN, so a push to
+      # ci-tools must not run new code here without review. rollout.mjs rewrites
+      # this SHA to the action commit it just pushed; bump it deliberately.
+      - name: Claude review
+        uses: frogbark/ci-tools/claude-review@86a2800035d1c0e8e15352ec7a58b4eb0f8681a3 # rewritten by rollout.mjs
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Optional per-repo overrides via repository variables:
+          model: ${{ vars.CLAUDE_REVIEW_MODEL }}
+          model-incremental: ${{ vars.CLAUDE_REVIEW_MODEL_INCREMENTAL }}
+          effort: ${{ vars.CLAUDE_REVIEW_EFFORT }}
