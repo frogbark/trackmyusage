@@ -49,10 +49,12 @@ let package = Package(
             name: "tmud",
             dependencies: [
                 "TMUDesktop", "TMURender", "TMUProviders",
-                "TMUClaude",
+                "TMUClaude", "TMUKit",
             ]),
         .executableTarget(name: "tmu", dependencies: ["TMUKit", "TMUProviders"]),
-        .executableTarget(name: "TMUApp", dependencies: ["TMUKit"]),
+        // TMUProviders is here for the keychain service names the migration needs. The
+        // provider snapshots themselves are not wired into the app yet.
+        .executableTarget(name: "TMUApp", dependencies: ["TMUKit", "TMUProviders"]),
         .testTarget(name: "TMUKitTests", dependencies: ["TMUKit"]),
         .testTarget(name: "TMUProvidersTests", dependencies: ["TMUProviders"]),
         .testTarget(

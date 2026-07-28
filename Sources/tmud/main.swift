@@ -1,6 +1,7 @@
 import Foundation
 import TMUClaude
 import TMUDesktop
+import TMUKit
 import TMUProviders
 import TMURender
 
@@ -177,6 +178,21 @@ if let index = arguments.firstIndex(of: "--density") {
 }
 
 let command = arguments.first ?? "help"
+
+// Any of the three binaries can be the first thing run after an upgrade, so each migrates.
+// This one matters most: launchd runs it every five minutes, so it is usually the first to
+// notice. Skipped for help and --version, which must not provoke a keychain prompt.
+if !["help", "--help", "-h", "--version"].contains(command) {
+    if let receipt = Migration.runOnceIfNeeded(
+        legacyKeychainService: KeychainCredentials.legacyService,
+        newKeychainService: KeychainCredentials.defaultService)
+    {
+        for (step, outcome) in receipt.outcomes.sorted(by: { $0.key < $1.key })
+        where outcome != .done {
+            FileHandle.standardError.write(Data("migration: \(step) \(outcome.summary)\n".utf8))
+        }
+    }
+}
 
 do {
     switch command {

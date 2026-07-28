@@ -1,9 +1,19 @@
 import SwiftUI
 import TMUKit
+import TMUProviders
 
 @main
 struct TrackMyUsageApp: App {
     @StateObject private var store = UsageStore()
+
+    init() {
+        // Before the store reads anything. The app is often the first thing launched after
+        // an upgrade — the CLI may never be run at all — so it cannot assume another binary
+        // migrated first.
+        Migration.runOnceIfNeeded(
+            legacyKeychainService: KeychainCredentials.legacyService,
+            newKeychainService: KeychainCredentials.defaultService)
+    }
 
     var body: some Scene {
         // The menu bar is the product's resting state: usage for every account visible
