@@ -1,4 +1,5 @@
 import Foundation
+import TMUDesign
 import TMUProviders
 
 /// The pixel dimensions the wallpaper is being drawn for.
@@ -43,35 +44,10 @@ public enum WallpaperSVG {
     // set of sizes serves every resolution. Width follows the aspect ratio.
     private static let designHeight: Double = 1440
 
-    private enum Ink {
-        static let scrim = "#0c1216"
-        static let primary = "#eaf0f2"
-        static let muted = "#8b979e"
-        static let track = "#ffffff"
-        static let ok = "#4e8f78"
-        static let warn = "#e0a24a"
-        static let over = "#e2564a"
-        static let absent = "#5b686f"
-    }
-
-    /// How a row should read at a glance.
-    ///
-    /// `uncapped` and `nodata` are deliberately separate. A provider reporting revenue has
-    /// a perfectly good reading and simply no ceiling to measure it against; collapsing
-    /// that into "no data" would hide a number we actually have.
-    private enum State: String {
-        case ok, warn, over, nodata, uncapped
-
-        var ink: String {
-            switch self {
-            case .ok: return Ink.ok
-            case .warn: return Ink.warn
-            case .over: return Ink.over
-            case .nodata: return Ink.absent
-            case .uncapped: return Ink.muted
-            }
-        }
-    }
+    /// The palette and the ok/warn/over classification live in TMUDesign, so the menu bar,
+    /// the popover and this renderer cannot drift into showing the same reading in three
+    /// different greens. `State` was private here and duplicated the same five cases.
+    private typealias State = UsageState
 
     private struct Row {
         let name: String
@@ -117,8 +93,10 @@ public enum WallpaperSVG {
         }
 
         if let binding = snapshot.binding, let utilization = binding.utilization {
-            let state: State =
-                utilization >= 100 ? .over : (utilization >= 80 ? .warn : .ok)
+            // Was two inline literals here, a second pair in Steering.Thresholds and a third
+            // in AlertPolicy's default. Three copies of 80 and 100 is three chances for the
+            // wallpaper to disagree with the notification that fired about it.
+            let state = UsageState.classify(utilization: utilization)
             return Row(
                 name: displayName(of: snapshot), utilization: utilization,
                 display: "\(grouped(utilization.rounded()))%", state: state)
@@ -175,9 +153,9 @@ public enum WallpaperSVG {
         var out = group(x: x, y: y)
         out += panel(width: width, height: height)
         out += label(
-            "usage", x: pad, y: pad + 12, size: 17, ink: Ink.muted, letterSpacing: 0.08)
+            "usage", x: pad, y: pad + 12, size: 17, ink: Ink.muted.value, letterSpacing: 0.08)
         out += label(
-            time(generatedAt), x: width - pad, y: pad + 12, size: 17, ink: Ink.muted,
+            time(generatedAt), x: width - pad, y: pad + 12, size: 17, ink: Ink.muted.value,
             anchor: "end")
 
         for (index, row) in ordered.enumerated() {
@@ -205,12 +183,12 @@ public enum WallpaperSVG {
         var out = "<g class=\"row \(row.state.rawValue)\">"
         out += label(
             truncate(row.name, size: nameSize, maxWidth: nameLimit),
-            x: pad, y: y, size: nameSize, ink: Ink.primary)
+            x: pad, y: y, size: nameSize, ink: Ink.primary.value)
 
         guard let utilization = row.utilization else {
             out += label(
                 row.display, x: valueRight, y: y, size: valueSize,
-                ink: row.state == .nodata ? Ink.absent : Ink.primary, anchor: "end")
+                ink: row.state == .nodata ? Ink.absent.value : Ink.primary.value, anchor: "end")
             return out + "</g>"
         }
 
@@ -218,13 +196,13 @@ public enum WallpaperSVG {
         // overflowing rect would paint straight over the label beside it.
         let filled = min(max(utilization, 0), 100) / 100 * trackWidth
         out += bar(
-            class: "track", x: trackX, y: y - 7, width: trackWidth, ink: Ink.track,
+            class: "track", x: trackX, y: y - 7, width: trackWidth, ink: Ink.track.value,
             opacity: 0.13)
         if filled > 0 {
-            out += bar(class: "fill", x: trackX, y: y - 7, width: filled, ink: row.state.ink)
+            out += bar(class: "fill", x: trackX, y: y - 7, width: filled, ink: row.state.ink.value)
         }
         out += label(
-            row.display, x: valueRight, y: y, size: valueSize, ink: Ink.primary,
+            row.display, x: valueRight, y: y, size: valueSize, ink: Ink.primary.value,
             anchor: "end")
         return out + "</g>"
     }
@@ -257,9 +235,9 @@ public enum WallpaperSVG {
         var out = group(x: x, y: y)
         out += panel(width: width, height: height)
         out += label(
-            "usage", x: pad, y: pad + 12, size: 17, ink: Ink.muted, letterSpacing: 0.08)
+            "usage", x: pad, y: pad + 12, size: 17, ink: Ink.muted.value, letterSpacing: 0.08)
         out += label(
-            time(generatedAt), x: width - pad, y: pad + 12, size: 17, ink: Ink.muted,
+            time(generatedAt), x: width - pad, y: pad + 12, size: 17, ink: Ink.muted.value,
             anchor: "end")
 
         for (index, row) in headline.enumerated() {
@@ -284,7 +262,7 @@ public enum WallpaperSVG {
         let maxHeight: Double = 22
         var out = "<g class=\"strip\">"
         out += "<rect class=\"rule\" x=\"\(n(pad))\" y=\"\(n(y - 4))\" "
-        out += "width=\"\(n(width - pad * 2))\" height=\"1\" fill=\"\(Ink.track)\" "
+        out += "width=\"\(n(width - pad * 2))\" height=\"1\" fill=\"\(Ink.track.value)\" "
         out += "fill-opacity=\"0.14\"/>"
 
         for (index, row) in rows.enumerated() {
@@ -296,10 +274,10 @@ public enum WallpaperSVG {
             out +=
                 "<rect class=\"fill\" x=\"\(n(barX))\" y=\"\(n(y + 18 + maxHeight - barHeight))\" "
             out += "width=\"\(n(barWidth))\" height=\"\(n(barHeight))\" rx=\"1\" "
-            out += "fill=\"\(row.state.ink)\"/></g>"
+            out += "fill=\"\(row.state.ink.value)\"/></g>"
         }
         out += label(
-            "\(rows.count) more", x: width - pad, y: y + 34, size: 17, ink: Ink.muted,
+            "\(rows.count) more", x: width - pad, y: y + 34, size: 17, ink: Ink.muted.value,
             anchor: "end")
         return out + "</g>"
     }
@@ -313,7 +291,7 @@ public enum WallpaperSVG {
     /// The scrim. Without it the overlay is illegible over a light photograph.
     private static func panel(width: Double, height: Double) -> String {
         "<rect class=\"panel\" x=\"0\" y=\"0\" width=\"\(n(width))\" height=\"\(n(height))\" "
-            + "rx=\"18\" fill=\"\(Ink.scrim)\" fill-opacity=\"0.52\"/>"
+            + "rx=\"18\" fill=\"\(Ink.scrim.value)\" fill-opacity=\"0.52\"/>"
     }
 
     private static func bar(

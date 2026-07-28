@@ -1,4 +1,5 @@
 import Foundation
+import TMUDesign
 
 /// The always-visible menu bar string.
 public struct MenuBarSummary: Sendable, Equatable {
@@ -12,7 +13,7 @@ public struct MenuBarSummary: Sendable, Equatable {
     }
 
     /// How old a reading may be before it is marked rather than shown as current.
-    public static let freshness: TimeInterval = 30 * 60
+    public static let freshness: TimeInterval = TMUDesign.Thresholds.staleAfter
 
     public static func of(accounts: [AccountUsage], now: Date) -> MenuBarSummary {
         guard !accounts.isEmpty else {
@@ -50,7 +51,9 @@ public struct AlertPolicy: Sendable {
     /// Highest threshold already announced for each account+metric, this window.
     private var announced: [Key: Double] = [:]
 
-    public init(thresholds: [Double] = [80, 100]) {
+    public init(
+        thresholds: [Double] = [TMUDesign.Thresholds.warn, TMUDesign.Thresholds.over]
+    ) {
         self.thresholds = thresholds.sorted()
     }
 
