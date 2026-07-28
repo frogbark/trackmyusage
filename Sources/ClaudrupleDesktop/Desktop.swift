@@ -48,10 +48,10 @@ public enum DesktopError: Error, Equatable, CustomStringConvertible {
 public enum DesktopFactory {
     public static func current() throws -> Desktop {
         #if canImport(AppKit)
-            return AppKitDesktop()
+        return AppKitDesktop()
         #else
-            throw DesktopError.unsupportedPlatform(
-                "only macOS is implemented; Linux and Windows backends are still to come")
+        throw DesktopError.unsupportedPlatform(
+            "only macOS is implemented; Linux and Windows backends are still to come")
         #endif
     }
 }

@@ -37,11 +37,12 @@ public struct GitHubProvider: UsageProvider {
     /// Search resets every minute and core every hour, so folding them into one number
     /// would misreport both — 9 of 30 search calls is a third of a minute's budget, not a
     /// third of an hour's.
-    private static let resources: [(name: String, key: String, label: String, window: TimeInterval)] = [
-        ("core", "rate_core", "API (core)", 3600),
-        ("search", "rate_search", "API (search)", 60),
-        ("graphql", "rate_graphql", "API (GraphQL)", 3600),
-    ]
+    private static let resources:
+        [(name: String, key: String, label: String, window: TimeInterval)] = [
+            ("core", "rate_core", "API (core)", 3600),
+            ("search", "rate_search", "API (search)", 60),
+            ("graphql", "rate_graphql", "API (GraphQL)", 3600),
+        ]
 
     public func fetch(secret: String?, now: Date) async throws -> ProviderReading {
         let (account, token) = Self.split(secret)
@@ -119,7 +120,8 @@ public struct GitHubProvider: UsageProvider {
         let isOrg = name.hasPrefix("@")
         if isOrg { name.removeFirst() }
 
-        let path = isOrg
+        let path =
+            isOrg
             ? "organizations/\(name)/settings/billing/usage"
             : "users/\(name)/settings/billing/usage"
         guard let url = URL(string: "https://api.github.com/\(path)") else { return [] }

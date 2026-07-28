@@ -33,8 +33,10 @@ public struct TwilioProvider: UsageProvider {
         guard !sid.isEmpty else {
             throw HTTPError.malformedResponse("missing Account SID")
         }
-        guard let url = URL(string:
-            "https://api.twilio.com/2010-04-01/Accounts/\(sid)/Usage/Records.json")
+        guard
+            let url = URL(
+                string:
+                    "https://api.twilio.com/2010-04-01/Accounts/\(sid)/Usage/Records.json")
         else { throw HTTPError.malformedResponse("bad Account SID") }
 
         let auth = "Basic " + Data(secret.utf8).base64EncodedString()
@@ -46,7 +48,8 @@ public struct TwilioProvider: UsageProvider {
             let records = root["usage_records"] as? [[String: Any]]
         else { throw HTTPError.malformedResponse("expected a `usage_records` array") }
         guard !records.isEmpty else {
-            throw HTTPError.malformedResponse("empty usage_records — an account always reports rows")
+            throw HTTPError.malformedResponse(
+                "empty usage_records — an account always reports rows")
         }
 
         let currency = (records.first?["price_unit"] as? String)?.uppercased() ?? "USD"
@@ -76,7 +79,8 @@ public struct TwilioProvider: UsageProvider {
 
             // `usage` and `count` arrive as strings while `price` is a number. Reading
             // usage as a Double yields nil and would silently report zero.
-            let usage = (record["usage"] as? String).flatMap(Double.init)
+            let usage =
+                (record["usage"] as? String).flatMap(Double.init)
                 ?? (record["usage"] as? Double) ?? 0
 
             metrics.append(

@@ -47,7 +47,7 @@ final class UsageStore: ObservableObject {
         let loaded: [Row] = InstanceLocator.discover().compactMap { inst in
             let file = inst.profileURL.appendingPathComponent("plan-usage-history.json")
             guard let history = try? UsageHistory.parse(contentsOf: file),
-                  !history.samples.isEmpty
+                !history.samples.isEmpty
             else { return nil }
 
             let usage = AccountUsage(
@@ -80,7 +80,7 @@ final class UsageStore: ObservableObject {
         accounts
             .compactMap { a -> (String, Double)? in
                 guard let f = a.history.forecast(for: .fiveHour, now: now),
-                      let rate = f.pointsPerHourOrNil, rate > 0
+                    let rate = f.pointsPerHourOrNil, rate > 0
                 else { return nil }
                 return (a.instanceName, rate)
             }
@@ -90,12 +90,14 @@ final class UsageStore: ObservableObject {
     private func notifyIfNeeded(_ rows: [Row]) {
         for row in rows {
             guard let binding = row.binding else { continue }
-            guard alerts.shouldNotify(
-                account: row.name, metric: binding.metric, value: binding.value)
+            guard
+                alerts.shouldNotify(
+                    account: row.name, metric: binding.metric, value: binding.value)
             else { continue }
 
             let content = UNMutableNotificationContent()
-            content.title = binding.value >= 100
+            content.title =
+                binding.value >= 100
                 ? "\(row.name): \(binding.metric.displayName) exhausted"
                 : "\(row.name): \(binding.metric.displayName) at \(Int(binding.value))%"
 

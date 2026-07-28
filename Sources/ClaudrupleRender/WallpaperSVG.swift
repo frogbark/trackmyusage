@@ -217,7 +217,8 @@ public enum WallpaperSVG {
         // The number is reported unclamped, but the bar is clamped to its track — an
         // overflowing rect would paint straight over the label beside it.
         let filled = min(max(utilization, 0), 100) / 100 * trackWidth
-        out += bar(class: "track", x: trackX, y: y - 7, width: trackWidth, ink: Ink.track,
+        out += bar(
+            class: "track", x: trackX, y: y - 7, width: trackWidth, ink: Ink.track,
             opacity: 0.13)
         if filled > 0 {
             out += bar(class: "fill", x: trackX, y: y - 7, width: filled, ink: row.state.ink)
@@ -277,8 +278,7 @@ public enum WallpaperSVG {
     ///
     /// Deliberately unlabelled: at this size a name would be unreadable, and the strip's
     /// job is only to say that something out here has moved, so you go and look.
-    private static func strip(_ rows: [Row], y: Double, width: Double, pad: Double) -> String
-    {
+    private static func strip(_ rows: [Row], y: Double, width: Double, pad: Double) -> String {
         let barWidth: Double = 8
         let gap: Double = 6
         let maxHeight: Double = 22
@@ -293,7 +293,8 @@ public enum WallpaperSVG {
             let fraction = min(max(row.utilization ?? 0, 0), 100) / 100
             let barHeight = max(3, fraction * maxHeight)
             out += "<g class=\"row \(row.state.rawValue)\">"
-            out += "<rect class=\"fill\" x=\"\(n(barX))\" y=\"\(n(y + 18 + maxHeight - barHeight))\" "
+            out +=
+                "<rect class=\"fill\" x=\"\(n(barX))\" y=\"\(n(y + 18 + maxHeight - barHeight))\" "
             out += "width=\"\(n(barWidth))\" height=\"\(n(barHeight))\" rx=\"1\" "
             out += "fill=\"\(row.state.ink)\"/></g>"
         }

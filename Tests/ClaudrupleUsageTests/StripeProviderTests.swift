@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleUsage
 
 /// Stripe. Amounts arrive in minor units — 666670 is 6666.70 — which is the detail most
@@ -43,7 +44,8 @@ final class StripeProviderTests: XCTestCase {
 
     func testCurrenciesStaySeparate() async throws {
         // Collapsing them would add euros to dollars.
-        let (p, _) = provider("""
+        let (p, _) = provider(
+            """
             {"object":"balance","available":[
                {"amount":10000,"currency":"usd"},{"amount":25050,"currency":"eur"}],
              "pending":[]}
@@ -75,7 +77,8 @@ final class StripeProviderTests: XCTestCase {
         XCTAssertEqual(liveReading.account, "live")
 
         let (test, _) = provider(
-            #"{"object":"balance","livemode":false,"available":[{"amount":1,"currency":"usd"}],"pending":[]}"#)
+            #"{"object":"balance","livemode":false,"available":[{"amount":1,"currency":"usd"}],"pending":[]}"#
+        )
         let testReading = try await test.fetch(secret: "sk", now: now)
         XCTAssertEqual(testReading.account, "test")
     }

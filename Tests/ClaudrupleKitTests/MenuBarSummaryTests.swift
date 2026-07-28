@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleKit
 
 /// The always-visible string, and the rule for when to interrupt someone.

@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleUsage
 
 /// Twilio. `count` and `usage` arrive as strings while `price` is a number — the detail
@@ -65,7 +66,8 @@ final class TwilioProviderTests: XCTestCase {
 
     func testPrefersTotalpriceOverSumming() async throws {
         // Summing when the totalprice row is present double-counts.
-        let (p, _) = provider("""
+        let (p, _) = provider(
+            """
             {"usage_records":[
               {"category":"sms","price":9.6,"price_unit":"usd","usage":"1200"},
               {"category":"totalprice","price":14.0,"price_unit":"usd","usage":"14"}
@@ -78,7 +80,8 @@ final class TwilioProviderTests: XCTestCase {
 
     func testZeroPricedCategoriesAreOmitted() async throws {
         // An account reports dozens of categories, nearly all zero; they bury the rest.
-        let (p, _) = provider("""
+        let (p, _) = provider(
+            """
             {"usage_records":[
               {"category":"sms","price":9.6,"price_unit":"usd","usage":"1200"},
               {"category":"fax","price":0,"price_unit":"usd","usage":"0"}

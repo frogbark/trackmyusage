@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleKit
 
 /// Reads a real instance profile off disk. Tested against real temp directories rather

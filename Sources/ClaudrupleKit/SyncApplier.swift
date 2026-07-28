@@ -217,7 +217,8 @@ public enum SyncApplier {
         // the running-state guard — i.e. as a mid-write failure on a real profile. The
         // random suffix costs nothing and removes the whole class.
         let token = String(UUID().uuidString.prefix(6))
-        let backup = root
+        let backup =
+            root
             .appendingPathComponent("sync-\(profile.lastPathComponent)-\(stamp)-\(token)")
 
         try FileManager.default.createDirectory(

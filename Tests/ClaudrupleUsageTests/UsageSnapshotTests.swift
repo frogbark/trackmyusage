@@ -18,9 +18,9 @@ final class UsageSnapshotTests: XCTestCase {
         let snapshot = UsageSnapshot(
             provider: "vercel", account: "team", observedAt: observed, status: .ok,
             metrics: [
-                metric("bandwidth", 200, limit: 1000),   // 20%
-                metric("builds", 90, limit: 100),        // 90%
-                metric("functions", 500, limit: 2000),   // 25%
+                metric("bandwidth", 200, limit: 1000),  // 20%
+                metric("builds", 90, limit: 100),  // 90%
+                metric("functions", 500, limit: 2000),  // 25%
             ])
 
         XCTAssertEqual(

@@ -21,8 +21,9 @@ enum ProviderCommands {
 
     private static func find(_ id: String?) -> any UsageProvider {
         guard let id, let p = ProviderRegistry.provider(id: id) else {
-            die("unknown provider. Known: "
-                + ProviderRegistry.all().map(\.id).joined(separator: ", "))
+            die(
+                "unknown provider. Known: "
+                    + ProviderRegistry.all().map(\.id).joined(separator: ", "))
         }
         return p
     }
@@ -33,15 +34,17 @@ enum ProviderCommands {
         print("\n  provider      credential   requires")
         for p in ProviderRegistry.all() {
             let stored = ((try? credentials.secret(for: p.id)) ?? nil) != nil
-            print("  \(pad(p.id, 13)) \(pad(stored ? "stored" : "—", 12)) "
-                + (p.credentialSpec.required ? "a token" : "optional"))
+            print(
+                "  \(pad(p.id, 13)) \(pad(stored ? "stored" : "—", 12)) "
+                    + (p.credentialSpec.required ? "a token" : "optional"))
         }
-        print("""
+        print(
+            """
 
-          Not yet implemented: \(ProviderRegistry.pending.joined(separator: ", ")).
-          Each needs its real response captured first — see `provider probe`.
+              Not yet implemented: \(ProviderRegistry.pending.joined(separator: ", ")).
+              Each needs its real response captured first — see `provider probe`.
 
-        """)
+            """)
     }
 
     // MARK: - add / remove

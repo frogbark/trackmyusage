@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import ClaudrupleKit
 
 /// The planner turns "what the manifest says" plus "what an instance actually has" into
@@ -48,10 +49,10 @@ final class SyncPlanTests: XCTestCase {
             name: "Work",
             extensions: [],
             configKeys: [
-                "dockBounceEnabled",                 // environment — syncable
-                "bypassPermissionsGateByAccount",    // account     — must be refused
-                "oauth:tokenCacheV2",                // account     — must be refused
-                "Cookies",                           // machine     — must be refused
+                "dockBounceEnabled",  // environment — syncable
+                "bypassPermissionsGateByAccount",  // account     — must be refused
+                "oauth:tokenCacheV2",  // account     — must be refused
+                "Cookies",  // machine     — must be refused
             ])
 
         let plan = SyncPlan.between(spec: manifest, state: state)

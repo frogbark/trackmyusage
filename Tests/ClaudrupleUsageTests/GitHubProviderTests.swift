@@ -76,7 +76,8 @@ final class GitHubProviderTests: XCTestCase {
         // GitHub returns different resource sets for different token types. A resource that
         // is absent is unknown, and reporting it as 0% would read as unlimited headroom.
         let client = FixtureHTTPClient(json: [
-            GitHubProvider.rateLimitEndpoint: #"{"resources":{"core":{"limit":5000,"remaining":4900,"reset":1785151794,"used":100}}}"#
+            GitHubProvider.rateLimitEndpoint:
+                #"{"resources":{"core":{"limit":5000,"remaining":4900,"reset":1785151794,"used":100}}}"#
         ])
         let snapshot = try await self.snapshot(client: client)
 
@@ -97,7 +98,8 @@ final class GitHubProviderTests: XCTestCase {
     // MARK: -
 
     private func snapshot(client: FixtureHTTPClient? = nil) async throws -> UsageSnapshot {
-        let http = client ?? FixtureHTTPClient(json: [GitHubProvider.rateLimitEndpoint: Self.recorded])
+        let http =
+            client ?? FixtureHTTPClient(json: [GitHubProvider.rateLimitEndpoint: Self.recorded])
         let store = MutableCredentials()
         try store.set("gh_test_token", for: "github")
         return await GitHubProvider(http: http).snapshot(credentials: store, now: now)

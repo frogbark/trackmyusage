@@ -37,7 +37,8 @@ public enum InstanceLocator {
         guard bundleID != primaryBundleID else {
             return support.appendingPathComponent("Claude")
         }
-        return support
+        return
+            support
             .appendingPathComponent("Claudruple")
             .appendingPathComponent(displayName)
     }
@@ -55,8 +56,9 @@ public enum InstanceLocator {
         }
 
         let dir = URL(fileURLWithPath: instancesPath)
-        let entries = (try? FileManager.default.contentsOfDirectory(
-            at: dir, includingPropertiesForKeys: nil)) ?? []
+        let entries =
+            (try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: nil)) ?? []
 
         for app in entries.sorted(by: { $0.path < $1.path }) where app.pathExtension == "app" {
             if let inst = describe(app, home: home) { found.append(inst) }
@@ -66,13 +68,14 @@ public enum InstanceLocator {
 
     private static func describe(_ appURL: URL, home: URL) -> DiscoveredInstance? {
         guard let bundle = Bundle(url: appURL),
-              let bundleID = bundle.bundleIdentifier,
-              isClaudeInstance(bundleID: bundleID)
+            let bundleID = bundle.bundleIdentifier,
+            isClaudeInstance(bundleID: bundleID)
         else { return nil }
 
         // CFBundleName is pinned to "Claude" on every clone so Electron can find its
         // helpers, so the display name is the only thing that distinguishes them.
-        let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+        let name =
+            (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
             ?? appURL.deletingPathExtension().lastPathComponent
 
         return DiscoveredInstance(

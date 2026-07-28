@@ -40,7 +40,6 @@ let usage = """
       registry on exit and would discard the changes. Quit the target first.
     """
 
-
 /// Pad to a column width by character count.
 ///
 /// `String(format: "%-12s", …)` pads by *bytes*, so a single em dash or accented character
@@ -65,9 +64,10 @@ func describe(_ plan: SyncPlan, for name: String, policy: DriftPolicy) {
         // cannot distinguish a safety refusal from a bug.
         let account = plan.refused.filter { $0.scope == .account }
         if !account.isEmpty {
-            print("    · \(account.count) account-scoped key(s) not synced: "
-                + account.prefix(3).map(\.key).joined(separator: ", ")
-                + (account.count > 3 ? ", …" : ""))
+            print(
+                "    · \(account.count) account-scoped key(s) not synced: "
+                    + account.prefix(3).map(\.key).joined(separator: ", ")
+                    + (account.count > 3 ? ", …" : ""))
         }
     }
 }
@@ -121,8 +121,11 @@ func loadAccounts() -> [(DiscoveredInstance, AccountUsage)] {
         let file = inst.profileURL.appendingPathComponent("plan-usage-history.json")
         guard let h = try? UsageHistory.parse(contentsOf: file), !h.samples.isEmpty
         else { return nil }
-        return (inst, AccountUsage(
-            instanceName: inst.name, bundleID: inst.bundleID, history: h))
+        return (
+            inst,
+            AccountUsage(
+                instanceName: inst.name, bundleID: inst.bundleID, history: h)
+        )
     }
 }
 
@@ -133,10 +136,11 @@ func loadAccounts() -> [(DiscoveredInstance, AccountUsage)] {
 /// now. `--active` overrides when the guess is wrong.
 func inferActive(_ accounts: [AccountUsage], now: Date, override: String?) -> String? {
     if let override { return override }
-    return accounts
+    return
+        accounts
         .compactMap { a -> (String, Double)? in
             guard let f = a.history.forecast(for: .fiveHour, now: now),
-                  let rate = f.pointsPerHourOrNil, rate > 0
+                let rate = f.pointsPerHourOrNil, rate > 0
             else { return nil }
             return (a.instanceName, rate)
         }
@@ -165,14 +169,15 @@ func cmdSteer(activeOverride: String?, confirmed: Bool) {
     for (inst, a) in loaded {
         let b = a.binding(now: now)
         let tag = inst.name == active ? " (active)" : ""
-        print("  \(pad(inst.name, 14)) \(pad(b?.metric.displayName ?? "—", 10))"
-            + String(format: " %5.1f%%  headroom %.0f", b?.value ?? 0, a.headroom(now: now))
-            + tag)
+        print(
+            "  \(pad(inst.name, 14)) \(pad(b?.metric.displayName ?? "—", 10))"
+                + String(format: " %5.1f%%  headroom %.0f", b?.value ?? 0, a.headroom(now: now))
+                + tag)
     }
     printAdvice(advice, active: active)
 
     guard let target = advice.recommended,
-          let dest = loaded.first(where: { $0.0.name == target })?.0
+        let dest = loaded.first(where: { $0.0.name == target })?.0
     else { return print("") }
 
     guard confirmed else {
@@ -192,7 +197,7 @@ func cmdUsage() {
     for inst in InstanceLocator.discover() {
         let file = inst.profileURL.appendingPathComponent("plan-usage-history.json")
         guard let history = try? UsageHistory.parse(contentsOf: file),
-              let latest = history.samples.last
+            let latest = history.samples.last
         else { continue }
         any = true
 
@@ -202,7 +207,8 @@ func cmdUsage() {
         // Latest sample first, so a metric that stopped being reported does not linger.
         for metric in latest.metrics.keys.sorted(by: { $0.displayName < $1.displayName }) {
             guard let value = latest.metrics[metric] else { continue }
-            var line = "    \(pad(metric.displayName, 20)) \(bar(value)) "
+            var line =
+                "    \(pad(metric.displayName, 20)) \(bar(value)) "
                 + String(format: "%5.1f%%", value)
 
             if let f = history.forecast(for: metric, now: now) {
@@ -238,9 +244,11 @@ func resolveSource(
     guard !installs.isEmpty else { return candidates.first }
 
     let wanted = Set(installs)
-    return candidates
+    return
+        candidates
         .map { inst -> (DiscoveredInstance, Int) in
-            let have = (try? ProfileReader.read(name: inst.name, profileURL: inst.profileURL))?
+            let have =
+                (try? ProfileReader.read(name: inst.name, profileURL: inst.profileURL))?
                 .extensions ?? []
             return (inst, wanted.intersection(have).count)
         }
@@ -293,8 +301,9 @@ func cmdPlanOrApply(path: String, prune: Bool, apply: Bool) {
             continue
         }
 
-        guard let src = resolveSource(
-            for: plan.installs, excluding: spec.name, override: sourceOverride)
+        guard
+            let src = resolveSource(
+                for: plan.installs, excluding: spec.name, override: sourceOverride)
         else {
             print("    ! no instance holds the extensions to install; nothing was written")
             continue
@@ -309,15 +318,17 @@ func cmdPlanOrApply(path: String, prune: Bool, apply: Bool) {
                 plan: plan, from: src.profileURL, to: inst.profileURL,
                 targetName: spec.name, running: .stopped, options: options)
 
-            print("    applied: \(result.installed.count) installed, "
-                + "\(result.removed.count) removed")
+            print(
+                "    applied: \(result.installed.count) installed, "
+                    + "\(result.removed.count) removed")
             for s in result.skipped { print("    · skipped \(s.id) — \(s.reason)") }
             if let b = result.backupURL { print("    backup: \(b.path)") }
             if !withSettings && !result.installed.isEmpty {
                 // Say it plainly: an extension that needs a key arrives inert, and a user
                 // who does not know that will read it as a broken install.
-                print("    note: extension settings were not copied — configure keys per "
-                    + "account (--with-settings overrides, and copies credentials)")
+                print(
+                    "    note: extension settings were not copied — configure keys per "
+                        + "account (--with-settings overrides, and copies credentials)")
             }
         } catch let e as ApplyError {
             print("    ! \(e.description)")
