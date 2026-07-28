@@ -35,17 +35,25 @@ never a commit that changed behaviour.
 ## Layout
 
 ```
-TMUKit                  instances · sync · Claude's local usage · steering
+TMUDesign               the palette, ok/warn/over, thresholds, the brand mark
 TMUProviders            the provider SDK: HTTP seam, snapshots, credentials, adapters
+TMUTelemetry            raw snapshots → the one model every surface renders
+TMUKit                  instances · sync · Claude's local usage · steering · migration
 TMUClaude               Claude's local history as provider snapshots
-TMURender               usage → SVG → raster
+TMURender               the model → SVG → raster
 TMUDesktop              reading and writing the desktop background
+TMUAppCore              the app's stores and views, as a library
 
-tmu                     CLI: instances, sync, usage, steer, providers
+tmu                     CLI: instances, sync, usage, steer, providers, assets
 tmud                    renders and applies the usage wallpaper (one-shot, not resident)
-TrackMyUsage.app        menu bar gauge and instance window
+TrackMyUsage.app        menu bar gauge and instances window
 TrackMyUsage Link.app   deep-link broker
 ```
+
+`TMUDesign` and `TMUProviders` depend on **nothing**, deliberately, and CI has a Linux job
+that proves it. `TMUTelemetry` is the choke point where snapshots become drawable — the
+wallpaper, the pill, the popover and the instances window all render the same
+`TelemetryModel`, which is the only structural guarantee they agree.
 
 Modules are TMU-prefixed rather than spelling the brand out — `TrackMyUsageUsage` is
 indefensible, and the brand already contains the word. The full name lives where people
@@ -121,4 +129,9 @@ in a request URL.
 
 Never hand-edit these; regenerate them and commit the result. CI fails if they are stale.
 
-- *(none yet — the provider matrix and app icons arrive with the website and brand-mark PRs)*
+- `web/providers.json` — from `ProviderRegistry`, via `tmu provider --json`
+- `web/mark.svg`, `web/icon.svg` — from `BrandMark`, via `tmu assets mark`
+
+Regenerate with `./scripts/generate-web.sh`. CI runs `./scripts/check-generated.sh` and fails
+if the committed copies differ, which is what makes the provider counts on the website
+structurally unable to overstate what actually ships.

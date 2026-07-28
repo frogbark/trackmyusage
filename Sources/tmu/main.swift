@@ -389,6 +389,10 @@ case "steer":
     cmdSteer(activeOverride: activeOverride, confirmed: confirmed)
 case "provider":
     ProviderCommands.run(Array(args.dropFirst()))
+case "assets":
+    // Brand assets are generated from geometry rather than committed as files, so the mark
+    // on the website, the app icon and the menu bar glyph cannot drift apart.
+    AssetCommands.run(Array(args.dropFirst()))
 case "capture":
     cmdCapture(args.count > 1 ? args[1] : nil)
 case "plan", "apply":

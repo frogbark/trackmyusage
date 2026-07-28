@@ -4,9 +4,29 @@ import TMUProviders
 /// `tmu provider …`
 enum ProviderCommands {
 
+    /// The provider matrix, for the website. Emitted from the registry rather than
+    /// hand-written into the page, and checked in CI, so the counts on trackmyusage.dev
+    /// cannot claim more than the binary can do.
+    static func json() {
+        let rows = ProviderRegistry.matrix.map { row -> String in
+            let note = row.note.map { ", \"note\": \"\($0)\"" } ?? ""
+            return "    { \"id\": \"\(row.id)\", \"status\": \"\(row.status)\"\(note) }"
+        }
+        print("{")
+        print("  \"built\": \(ProviderRegistry.built.count),")
+        print("  \"blocked\": \(ProviderRegistry.blocked.count),")
+        print("  \"planned\": \(ProviderRegistry.pending.count),")
+        print("  \"total\": \(ProviderRegistry.intended.count),")
+        print("  \"providers\": [")
+        print(rows.joined(separator: ",\n"))
+        print("  ]")
+        print("}")
+    }
+
     static func run(_ args: [String]) {
         switch args.first {
         case "list", nil: list()
+        case "--json": json()
         case "add": add(id: args.count > 1 ? args[1] : nil)
         case "remove": remove(id: args.count > 1 ? args[1] : nil)
         case "probe": probe(id: args.count > 1 ? args[1] : nil)

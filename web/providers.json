@@ -1,0 +1,25 @@
+{
+  "built": 5,
+  "blocked": 2,
+  "planned": 10,
+  "total": 17,
+  "providers": [
+    { "id": "claude", "status": "built" },
+    { "id": "openai", "status": "planned" },
+    { "id": "github", "status": "built" },
+    { "id": "vercel", "status": "planned" },
+    { "id": "twilio", "status": "built" },
+    { "id": "elevenlabs", "status": "built" },
+    { "id": "sentry", "status": "planned" },
+    { "id": "posthog", "status": "planned" },
+    { "id": "firecrawl", "status": "planned" },
+    { "id": "resend", "status": "planned" },
+    { "id": "stripe", "status": "built" },
+    { "id": "supabase", "status": "planned" },
+    { "id": "modal", "status": "planned" },
+    { "id": "inngest", "status": "planned" },
+    { "id": "hostinger", "status": "planned" },
+    { "id": "higgsfield", "status": "blocked", "note": "no public usage endpoint" },
+    { "id": "openart", "status": "blocked", "note": "no public usage endpoint" }
+  ]
+}
