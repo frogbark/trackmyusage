@@ -1,158 +1,98 @@
 import SwiftUI
+import TMUAppCore
+import TMUDesign
 import TMUKit
 import TMUProviders
 
+/// The shell: `@main`, two Scenes, and nothing else.
+///
+/// Everything with behaviour lives in `TMUAppCore`, which is a library and therefore
+/// testable. Before the split this target had no tests at all — not because nobody wrote
+/// them, but because `@testable import` of an executable target is awkward enough that
+/// nobody was going to.
 @main
 struct TrackMyUsageApp: App {
-    @StateObject private var store = UsageStore()
+
+    @StateObject private var store: TelemetryStore
 
     init() {
         // Before the store reads anything. The app is often the first thing launched after
         // an upgrade — the CLI may never be run at all — so it cannot assume another binary
         // migrated first.
-        Migration.runOnceIfNeeded(
+        let receipt = Migration.runOnceIfNeeded(
             legacyKeychainService: KeychainCredentials.legacyService,
             newKeychainService: KeychainCredentials.defaultService)
+
+        let store = TelemetryStore()
+        // Surface a migration that did not finish, once. Being honestly incomplete beats
+        // being quietly wrong, and the commonest case — launch agents waiting for their
+        // binaries to be reinstalled — needs the user to do something.
+        if let unfinished = receipt?.outcomes
+            .filter({ $0.value != .done })
+            .map({ "\($0.key): \($0.value.summary)" })
+            .sorted()
+            .first
+        {
+            store.note(migration: "Migration incomplete — \(unfinished)")
+        }
+        _store = StateObject(wrappedValue: store)
     }
 
     var body: some Scene {
-        // The menu bar is the product's resting state: usage for every account visible
-        // without opening anything.
+        // The menu bar is the product's resting state: usage for every account and every
+        // metered service visible without opening anything.
         MenuBarExtra {
-            MenuContent(store: store)
+            Popover(
+                store: store,
+                onOpenInstances: {
+                    NSApp.activate(ignoringOtherApps: true)
+                    NSApp.windows.first { $0.identifier?.rawValue.contains("main") == true }?
+                        .makeKeyAndOrderFront(nil)
+                },
+                onQuit: { NSApp.terminate(nil) }
+            )
+            .task { Notifier.requestPermission() }
         } label: {
-            HStack(spacing: 4) {
-                Image(
-                    systemName: store.summary.isCritical
-                        ? "exclamationmark.triangle.fill" : "gauge.medium")
-                Text(store.summary.title)
-            }
+            MenuBarLabel(store: store)
         }
         .menuBarExtraStyle(.window)
 
-        Window("TrackMyUsage", id: "main") {
-            InstancesView(store: store)
+        Window("Instances", id: "main") {
+            InstancesWindow(store: store)
         }
-        .defaultSize(width: 560, height: 420)
+        .defaultSize(width: 640, height: 460)
     }
 }
 
-// MARK: - Menu bar content
-
-struct MenuContent: View {
-    @ObservedObject var store: UsageStore
-    @Environment(\.openWindow) private var openWindow
+/// The pill: the mark, then a percentage per account.
+private struct MenuBarLabel: View {
+    @ObservedObject var store: TelemetryStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if store.rows.isEmpty {
-                Text("No usage history yet")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(store.rows) { row in
-                    AccountRow(row: row, isActive: row.name == store.activeInstance) {
-                        store.activate(row.instance)
-                    }
-                }
-            }
-
-            if let advice = store.advice, advice.urgency != .none {
-                Divider()
-                AdviceBanner(advice: advice, store: store)
-            }
-
-            Divider()
-            HStack {
-                Button("Instances…") { openWindow(id: "main") }
-                Spacer()
-                Button("Refresh") { store.refresh() }
-                Button("Quit") { NSApplication.shared.terminate(nil) }
-            }
-            .buttonStyle(.borderless)
-            .font(.callout)
-        }
-        .padding(14)
-        .frame(width: 330)
-        .task { store.requestNotificationPermission() }
-    }
-}
-
-struct AccountRow: View {
-    let row: UsageStore.Row
-    let isActive: Bool
-    let activate: () -> Void
-
-    private var value: Double { row.binding?.value ?? 0 }
-
-    private var tint: Color {
-        switch value {
-        case 100...: return .red
-        case 80...: return .orange
-        default: return .accentColor
+        HStack(spacing: 4) {
+            MarkGlyph(peak: peak, isStale: anyStale)
+            Text(title).monospacedDigit()
         }
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Text(row.name).fontWeight(.medium)
-                if isActive {
-                    Text("active")
-                        .font(.caption2)
-                        .padding(.horizontal, 5).padding(.vertical, 1)
-                        .background(.quaternary, in: Capsule())
-                }
-                Spacer()
-                Text("\(Int(value))%").monospacedDigit().foregroundStyle(tint)
-            }
-
-            ProgressView(value: min(value, 100), total: 100)
-                .tint(tint)
-
-            HStack {
-                Text(row.binding?.metric.displayName ?? "—")
-                Spacer()
-                // Only claim a forecast when one was actually measurable — a blank is
-                // honest, an invented "0/h" is not.
-                if let f = row.forecast, let at = f.exhaustionDate {
-                    Text("full \(at, format: .relative(presentation: .numeric))")
-                } else if value >= 100 {
-                    Text("exhausted")
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-        .contentShape(Rectangle())
-        .onTapGesture(perform: activate)
+    /// Order is the model's — by name, stable. A pill whose numbers swap places as usage
+    /// moves cannot be read at a glance, which is the only thing a pill is for.
+    private var title: String {
+        let accounts = store.model.claude
+        guard !accounts.isEmpty else { return "—" }
+        return accounts.map(\.display).joined(separator: " · ")
     }
-}
 
-struct AdviceBanner: View {
-    let advice: SteeringAdvice
-    @ObservedObject var store: UsageStore
+    /// The worst state anywhere, which is what the third bar reports.
+    private var peak: UsageState {
+        let states = store.model.claude.map(\.state) + store.model.services.map(\.state)
+        if states.contains(.over) { return .over }
+        if states.contains(.warn) { return .warn }
+        return .ok
+    }
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(
-                systemName: advice.urgency == .exhausted
-                    ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill"
-            )
-            .foregroundStyle(advice.urgency == .exhausted ? .red : .orange)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(advice.reason).font(.callout).fixedSize(horizontal: false, vertical: true)
-
-                // Switching is offered, never performed unprompted: rearranging someone's
-                // windows mid-task is how a helpful tool becomes an annoying one.
-                if let target = advice.recommended,
-                    let row = store.rows.first(where: { $0.name == target })
-                {
-                    Button("Switch to \(target)") { store.activate(row.instance) }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-                }
-            }
-        }
+    private var anyStale: Bool {
+        store.model.claude.contains(where: \.isStale)
+            || store.model.services.contains(where: \.isStale)
     }
 }

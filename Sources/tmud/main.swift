@@ -98,7 +98,12 @@ struct Rendered {
 }
 
 /// Renders every display and returns where each image landed.
-func renderAll(layout: WallpaperLayoutID, into directory: URL) throws -> [Rendered] {
+func renderAll(layout override: WallpaperLayoutID?, into directory: URL) throws -> [Rendered] {
+    // A display can have its own layout: a laptop next to a large monitor wants the card on
+    // one and the rail on the other, and one global setting cannot serve both. The flag,
+    // when given, beats the file — an explicit invocation should do what it says.
+    let settings = SettingsStore.load()
+    let known = Set(WallpaperLayoutID.allCases.map(\.rawValue))
     let desktop = try DesktopFactory.current()
     let displays = try desktop.displays()
     let snapshots = collect()
@@ -134,6 +139,11 @@ func renderAll(layout: WallpaperLayoutID, into directory: URL) throws -> [Render
             remembered: entry.pristine,
             outputDirectory: directory)
         if let origin { entry.pristine = origin }
+
+        let layout =
+            override
+            ?? WallpaperLayoutID(rawValue: settings.layout(for: display.id, known: known))
+            ?? .ledger
 
         let svg = WallpaperSVG.render(
             model, layout: layout, canvas: display.canvas)
@@ -184,7 +194,7 @@ func describe(_ snapshots: [UsageSnapshot]) {
 // MARK: - Dispatch
 
 var arguments = Array(CommandLine.arguments.dropFirst())
-var layout = WallpaperLayoutID.ledger
+var layout: WallpaperLayoutID?
 
 if let index = arguments.firstIndex(of: "--layout") {
     guard index + 1 < arguments.count,

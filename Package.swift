@@ -60,10 +60,17 @@ let package = Package(
                 "TMUClaude", "TMUKit",
             ]),
         .executableTarget(name: "tmu", dependencies: ["TMUKit", "TMUProviders"]),
-        // TMUProviders is here for the keychain service names the migration needs. The
-        // provider snapshots themselves are not wired into the app yet.
-        .executableTarget(name: "TMUApp", dependencies: ["TMUKit", "TMUProviders", "TMUDesign"]),
+        // The app, minus its @main and its Scenes. Splitting the library out is what makes
+        // any of it testable: an executable target cannot be @testable imported cleanly, and
+        // everything worth testing here is view-model logic anyway.
+        .target(
+            name: "TMUAppCore",
+            dependencies: [
+                "TMUKit", "TMUProviders", "TMUClaude", "TMUTelemetry", "TMUDesign",
+            ]),
+        .executableTarget(name: "TMUApp", dependencies: ["TMUAppCore"]),
         .testTarget(name: "TMUDesignTests", dependencies: ["TMUDesign"]),
+        .testTarget(name: "TMUAppCoreTests", dependencies: ["TMUAppCore"]),
         .testTarget(
             name: "TMUTelemetryTests",
             dependencies: ["TMUTelemetry", "TMUProviders", "TMUDesign"]),
