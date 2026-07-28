@@ -71,7 +71,7 @@ public enum Ink {
 /// The raw values are load-bearing: the wallpaper emits them as CSS classes
 /// (`<g class="row warn">`) and the renderer's tests assert on those strings. They are
 /// pinned by a test for that reason.
-public enum UsageState: String, Sendable, Equatable, CaseIterable {
+public enum UsageState: String, Codable, Sendable, Equatable, CaseIterable {
     case ok
     case warn
     case over

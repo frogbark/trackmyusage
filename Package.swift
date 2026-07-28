@@ -44,7 +44,10 @@ let package = Package(
         // Text in, text out. Producing SVG rather than pixels keeps the whole visual
         // design a pure function that diffs in a golden-file test, and leaves rasterising
         // as the only part that needs a platform.
-        .target(name: "TMURender", dependencies: ["TMUProviders", "TMUDesign"]),
+        // The shape every surface renders: raw snapshots interpreted once, so the wallpaper
+        // and the menu bar cannot disagree about what a reading means.
+        .target(name: "TMUTelemetry", dependencies: ["TMUProviders", "TMUDesign"]),
+        .target(name: "TMURender", dependencies: ["TMUProviders", "TMUDesign", "TMUTelemetry"]),
         // Reading and writing the desktop background is the one genuinely per-OS piece:
         // NSWorkspace here, a per-desktop-environment shell-out on Linux, and
         // SystemParametersInfoW on Windows.
@@ -61,6 +64,9 @@ let package = Package(
         // provider snapshots themselves are not wired into the app yet.
         .executableTarget(name: "TMUApp", dependencies: ["TMUKit", "TMUProviders", "TMUDesign"]),
         .testTarget(name: "TMUDesignTests", dependencies: ["TMUDesign"]),
+        .testTarget(
+            name: "TMUTelemetryTests",
+            dependencies: ["TMUTelemetry", "TMUProviders", "TMUDesign"]),
         .testTarget(name: "TMUKitTests", dependencies: ["TMUKit"]),
         .testTarget(name: "TMUProvidersTests", dependencies: ["TMUProviders"]),
         .testTarget(

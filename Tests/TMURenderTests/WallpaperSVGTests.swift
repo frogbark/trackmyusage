@@ -258,4 +258,25 @@ final class WallpaperSVGTests: XCTestCase {
 
         XCTAssertEqual(a, b)
     }
+
+    /// The compact card ranks by utilisation and then by name. The tiebreak used to compare
+    /// `$1.name` against `$0.name` — swapped across the tuples — so equal percentages came
+    /// out in reverse. Invisible whenever two providers differ, which is nearly always.
+    func testProvidersAtTheSamePercentageAreOrderedByName() {
+        let tied = ["delta", "alpha", "charlie", "bravo", "echo"].map {
+            snapshot($0, 50)
+        }
+        let svg = WallpaperSVG.render(
+            tied, density: .compact, canvas: .default, generatedAt: now)
+
+        // Four are headlined and drawn in name order; "echo" falls into the strip.
+        let order = ["alpha", "bravo", "charlie", "delta"].map {
+            svg.range(of: ">\($0)<")?.lowerBound
+        }
+        XCTAssertFalse(order.contains(where: { $0 == nil }), "all four should be headlined")
+        XCTAssertEqual(
+            order.compactMap { $0 }, order.compactMap { $0 }.sorted(),
+            "Rows at equal utilisation must read alphabetically, not backwards.")
+    }
+
 }

@@ -1,6 +1,7 @@
 import Foundation
 import TMUDesign
 import TMUProviders
+import TMUTelemetry
 
 /// The pixel dimensions the wallpaper is being drawn for.
 public struct WallpaperCanvas: Sendable, Equatable {
@@ -47,15 +48,40 @@ public enum WallpaperSVG {
     /// The palette and the ok/warn/over classification live in TMUDesign, so the menu bar,
     /// the popover and this renderer cannot drift into showing the same reading in three
     /// different greens. `State` was private here and duplicated the same five cases.
-    private typealias State = UsageState
+    typealias State = UsageState
 
-    private struct Row {
+    /// What a layout needs about one line. Both `AccountRow` and `ServiceRow` collapse to
+    /// this, so the rail can draw them in one list without caring which is which.
+    struct Row {
         let name: String
         /// Nil when there is no cap to be a fraction of — which is also the signal not to
         /// draw a bar, since a bar with no track length is a lie about a limit.
         let utilization: Double?
         let display: String
         let state: State
+        let isStale: Bool
+
+        init(_ row: TelemetryModel.AccountRow) {
+            self.init(row.name, row.utilization, row.display, row.state, row.isStale)
+        }
+        init(_ row: TelemetryModel.ServiceRow) {
+            self.init(row.name, row.utilization, row.display, row.state, row.isStale)
+        }
+        private init(
+            _ name: String, _ utilization: Double?, _ display: String, _ state: State,
+            _ isStale: Bool
+        ) {
+            self.name = name
+            self.utilization = utilization
+            self.display = display
+            self.state = state
+            self.isStale = isStale
+        }
+
+        /// A stale reading keeps its state but loses its confidence: drawn muted rather
+        /// than in the state colour, because full red claims a certainty about right now
+        /// that a half-hour-old number does not have.
+        var ink: String { Freshness.ink(for: state, stale: isStale).value }
     }
 
     // MARK: - Entry point
@@ -69,7 +95,10 @@ public enum WallpaperSVG {
         let scale = canvas.height > 0 ? canvas.height / designHeight : 1
         let designWidth = scale > 0 ? canvas.width / scale : canvas.width
 
-        let rows = snapshots.map(row(for:))
+        // One interpretation, shared with the menu bar and the popover. This used to be a
+        // private `row(for:)` here, which is how the surfaces came to disagree.
+        let model = TelemetryModel.build(snapshots: snapshots, now: generatedAt)
+        let rows = model.claude.map(Row.init) + model.services.map(Row.init)
         let body: String
         switch density {
         case .compact:
@@ -83,52 +112,6 @@ public enum WallpaperSVG {
             height="\(n(canvas.height))" viewBox="0 0 \(n(canvas.width)) \(n(canvas.height))">\
             <g transform="scale(\(n(scale)))">\(body)</g></svg>
             """
-    }
-
-    private static func row(for snapshot: UsageSnapshot) -> Row {
-        guard snapshot.isReporting else {
-            return Row(
-                name: displayName(of: snapshot), utilization: nil, display: "no data",
-                state: .nodata)
-        }
-
-        if let binding = snapshot.binding, let utilization = binding.utilization {
-            // Was two inline literals here, a second pair in Steering.Thresholds and a third
-            // in AlertPolicy's default. Three copies of 80 and 100 is three chances for the
-            // wallpaper to disagree with the notification that fired about it.
-            let state = UsageState.classify(utilization: utilization)
-            return Row(
-                name: displayName(of: snapshot), utilization: utilization,
-                display: "\(grouped(utilization.rounded()))%", state: state)
-        }
-
-        // Reporting, but nothing here has a ceiling. Show the reading in its own units.
-        guard let first = snapshot.metrics.first else {
-            return Row(
-                name: displayName(of: snapshot), utilization: nil, display: "no data",
-                state: .nodata)
-        }
-        return Row(
-            name: displayName(of: snapshot), utilization: nil, display: measure(first),
-            state: .uncapped)
-    }
-
-    /// What to call the row.
-    ///
-    /// The account wins where there is one. Several accounts of a single provider is the
-    /// situation this project exists to manage, and labelling every one of them "claude"
-    /// makes the wallpaper useless for exactly its main case. Where a credential identifies
-    /// the account implicitly there is nothing to disambiguate, so the provider stands.
-    private static func displayName(of snapshot: UsageSnapshot) -> String {
-        snapshot.account ?? snapshot.provider
-    }
-
-    private static func measure(_ metric: Metric) -> String {
-        switch metric.kind {
-        case .currency: return "$\(grouped(metric.value))"
-        case .percentOfLimit: return "\(grouped(metric.value))%"
-        case .absolute, .count: return grouped(metric.value)
-        }
     }
 
     // MARK: - Full: the left rail
@@ -199,7 +182,7 @@ public enum WallpaperSVG {
             class: "track", x: trackX, y: y - 7, width: trackWidth, ink: Ink.track.value,
             opacity: 0.13)
         if filled > 0 {
-            out += bar(class: "fill", x: trackX, y: y - 7, width: filled, ink: row.state.ink.value)
+            out += bar(class: "fill", x: trackX, y: y - 7, width: filled, ink: row.ink)
         }
         out += label(
             row.display, x: valueRight, y: y, size: valueSize, ink: Ink.primary.value,
@@ -219,8 +202,14 @@ public enum WallpaperSVG {
 
         // Headline by how full they are — the point of the compact density is the few that
         // matter — but drawn in name order so the card does not reshuffle as usage moves.
+        // The names were swapped across the two tuples here — `$1.name` compared against
+        // `$0.name` — so the utilisation-descending primary worked while the tiebreak ran
+        // backwards. Only observable when two providers sit at exactly the same percentage,
+        // which is why it survived: usually they do not.
         let ranked = rows.sorted {
-            ($0.utilization ?? -1, $1.name) > ($1.utilization ?? -1, $0.name)
+            let left = $0.utilization ?? -1
+            let right = $1.utilization ?? -1
+            return left == right ? $0.name < $1.name : left > right
         }
         let headline = Array(ranked.prefix(headlineCount)).sorted { $0.name < $1.name }
         let remainder = Array(ranked.dropFirst(headlineCount))
@@ -274,7 +263,7 @@ public enum WallpaperSVG {
             out +=
                 "<rect class=\"fill\" x=\"\(n(barX))\" y=\"\(n(y + 18 + maxHeight - barHeight))\" "
             out += "width=\"\(n(barWidth))\" height=\"\(n(barHeight))\" rx=\"1\" "
-            out += "fill=\"\(row.state.ink.value)\"/></g>"
+            out += "fill=\"\(row.ink)\"/></g>"
         }
         out += label(
             "\(rows.count) more", x: width - pad, y: y + 34, size: 17, ink: Ink.muted.value,
