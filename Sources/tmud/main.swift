@@ -279,6 +279,22 @@ do {
     case "help", "--help", "-h":
         usage()
 
+    case "--migrate":
+        // An explicit re-run, for when a deferred step's precondition has since been met.
+        // The usual one is the launch agents: they are skipped until the new binaries are
+        // actually installed, and nothing else would prompt a retry until the next fire.
+        let receipt = Migration.runOnceIfNeeded(
+            legacyKeychainService: KeychainCredentials.legacyService,
+            newKeychainService: KeychainCredentials.defaultService,
+            force: true)
+        guard let receipt, !receipt.outcomes.isEmpty else {
+            print("nothing left to migrate")
+            break
+        }
+        for (step, outcome) in receipt.outcomes.sorted(by: { $0.key < $1.key }) {
+            print("  \(step)  \(outcome.summary)")
+        }
+
     case "--version":
         print(version)
 

@@ -16,7 +16,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # The only permitted forms. Anything else containing "claudruple" is a finding.
-ALLOWED='com\.anthropic\.claudefordesktop\.claudruple\.|/Applications/Claudruple|Application Support/Claudruple|\$SUPPORT/Claudruple|com\.claudruple\.usage|Claudruple era|"Claudruple"|Claudruple ->|the Claudruple|called Claudruple'
+ALLOWED='com\.anthropic\.claudefordesktop\.claudruple\.|/Applications/Claudruple|Application Support/Claudruple|\$SUPPORT/Claudruple|/Caches/Claudruple|com\.claudruple\.usage|Claudruple era|"Claudruple"|Claudruple ->|the Claudruple|called Claudruple'
 
 # Documentation is allowed to discuss the old name in prose; code is not.
 findings=$(

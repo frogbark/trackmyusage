@@ -45,7 +45,13 @@ else
     case "$current" in
         # Never record one of our own renders as the original: doing so would make the
         # overlay permanent with no way back.
-        *"/Caches/TrackMyUsage/"*|"")
+        #
+        # The pre-rename path is listed too. An install that ran before the rename left the
+        # desktop pointing at ~/Library/Caches/Claudruple/wallpaper/, and matching only the
+        # current directory would let one of those through — the exact failure this case
+        # exists to prevent, reintroduced by the rename. On this machine it was caught only
+        # because the file had already moved and the readability check below failed.
+        *"/Caches/TrackMyUsage/"*|*"/Caches/Claudruple/"*|"")
             warn "no pristine original to capture — uninstall will not restore"
             ;;
         *)
@@ -112,7 +118,7 @@ tail -3 "$HOME/Library/Logs/TrackMyUsage/wallpaper.log" 2>/dev/null | sed 's/^/ 
 
 cat <<NEXT
 
-  Undo:   ~/claudedruple/scripts/uninstall-wallpaper-agent.sh
+  Undo:   $(cd "$(dirname "$0")" && pwd)/uninstall-wallpaper-agent.sh
   Logs:   ~/Library/Logs/TrackMyUsage/wallpaper.log
 
 NEXT

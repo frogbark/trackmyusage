@@ -61,17 +61,19 @@ git clone <this repo> && cd trackmyusage
 
 # Build and install the deep-link broker (once)
 ./scripts/build-link.sh
-cp -Rp "build/TrackMyUsage Link.app" /Applications/Claudruple/
+cp -Rp "build/TrackMyUsage Link.app" /Applications/
 ./scripts/install-link-agent.sh
 
 # Create an instance
 ./scripts/create-instance.sh "Work" --launch
 ```
 
-> `/Applications/Claudruple` is not a typo. The project was renamed, but that directory,
-> each clone's bundle id, and each clone's profile path are baked into LaunchServices
-> registrations, code signatures and a compiled-in launcher path. Renaming them would not
-> move anything — it would make working instances unreachable, silently. They stay.
+> You will see `/Applications/Claudruple` elsewhere, and it is not a typo. The project was
+> renamed, but that directory, each clone's bundle id and each clone's profile path are baked
+> into LaunchServices registrations, code signatures and a compiled-in launcher path.
+> Renaming them would not move anything — it would make working instances unreachable,
+> silently. It stays, and it holds **clones only**: TrackMyUsage's own two apps install to
+> `/Applications` like anything else.
 > See [`Sources/TMUKit/LegacyNames.swift`](Sources/TMUKit/LegacyNames.swift).
 
 Then sign into the new window with your second account. Remove one with:
@@ -117,8 +119,8 @@ Two rules the engine enforces rather than documents:
 
 ```bash
 ./scripts/build-app.sh
-cp -Rp build/TrackMyUsage.app /Applications/Claudruple/
-open -a "/Applications/Claudruple/TrackMyUsage.app"
+cp -Rp build/TrackMyUsage.app /Applications/
+open -a /Applications/TrackMyUsage.app
 ```
 
 Every account's binding limit, always visible — `61% · 100%`, with a warning glyph when one
