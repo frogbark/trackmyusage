@@ -76,7 +76,12 @@ public struct MarkGlyph: View {
     @MainActor
     public func nsImage(appearance: NSAppearance? = nil) -> NSImage? {
         let renderer = ImageRenderer(content: self.environment(\.colorScheme, scheme(appearance)))
-        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        // Never below 2x, whatever NSScreen says. The app can start before a screen is
+        // known — and CI has no screen at all, where `main` reports 1x — and a menu bar
+        // glyph baked at 1x stays soft for the life of the process, because this bitmap is
+        // made once per refresh rather than per draw. Oversampling costs a few hundred
+        // bytes and downscales cleanly on the rare non-Retina display.
+        renderer.scale = max(2, NSScreen.main?.backingScaleFactor ?? 2)
         guard let cgImage = renderer.cgImage else { return nil }
         let image = NSImage(
             cgImage: cgImage, size: NSSize(width: width, height: height))
