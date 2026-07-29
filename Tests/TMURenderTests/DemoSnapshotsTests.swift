@@ -15,6 +15,12 @@ final class DemoSnapshotsTests: XCTestCase {
     /// The committed SVGs are diffed against a fresh render. If anything in the pipeline
     /// reached for the wall clock, two runs a second apart would differ and the check would
     /// report staleness that no commit could fix.
+    ///
+    /// Note what this cannot see. Both renders happen in one process, so it agrees with
+    /// itself about anything ambient — and `Format.time` reads `TimeZone.current`, which
+    /// made the same frozen instant render 20:33 on a laptop and 03:33 on a UTC runner.
+    /// This test passed on both. `generate-web.sh` pins `TZ=UTC` for that reason; a test
+    /// cannot, because it would only be asserting the timezone it was already running in.
     func testRenderingTheSameCaseTwiceProducesIdenticalBytes() {
         for demo in DemoWallpaper.allCases {
             XCTAssertEqual(demo.svg(), demo.svg(), "\(demo.rawValue) is not reproducible")
