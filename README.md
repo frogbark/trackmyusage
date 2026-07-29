@@ -202,6 +202,7 @@ per provider. Every adapter declares its minimum read-only scope in code.
 |---|---|
 | `create-instance.sh` | Clone, stamp, shim, sign, register a new instance |
 | `remove-instance.sh` | Remove an instance; keeps the profile unless `--purge-data` |
+| `refresh-instance.sh` | Re-clone an instance from the current Claude, keeping its identity and profile |
 | `sign-clone.sh` | Inside-out re-signing (used by the above) |
 | `build-link.sh` | Build the deep-link broker |
 | `install-link-agent.sh` | Register the broker as a login agent |
@@ -225,7 +226,11 @@ IDENTITY="Developer ID Application: Your Name (TEAMID)" ./scripts/create-instanc
 - **Passkey / hardware-key sign-in may not work in clones.** The stock app carries
   `keychain-access-groups` entitlements bound to Anthropic's Team ID, which cannot survive
   re-signing. Keep the account that needs passkeys on the untouched `/Applications/Claude.app`.
-- **Clones do not auto-update.** When Claude updates, recreate them (profiles are unaffected).
+- **Clones do not auto-update.** They are byte copies taken at a moment in time. `tmu instances`
+  marks any that are on a different build, and `./scripts/refresh-instance.sh --all` re-clones
+  them from the Claude you have now. Profiles are untouched: they live outside the bundle, and
+  the refresh reuses each instance's existing bundle id and the profile path compiled into its
+  launcher rather than deriving either.
 - **`safeStorage` is shared.** Electron derives the keychain item from `app.getName()`, which
   is hardcoded, so all instances share `Claude Safe Storage`. Profiles remain separate; the
   encryption key does not. On the upside, this is why migrating a profile between instances

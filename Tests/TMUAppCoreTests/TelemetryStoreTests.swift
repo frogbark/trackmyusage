@@ -17,9 +17,27 @@ final class TelemetryStoreTests: XCTestCase {
 
     private struct StubInstances: InstanceReading {
         var snapshots: [UsageSnapshot] = []
+        var stale: [String] = []
         func read(now: Date) -> InstanceReadingResult {
             InstanceReadingResult(
-                snapshots: snapshots, rows: [], advice: nil, activeInstance: nil, alerts: [])
+                snapshots: snapshots, rows: [], advice: nil, activeInstance: nil, alerts: [],
+                staleInstances: stale)
+        }
+    }
+
+    /// A source whose answer can change between reads, for testing that a condition clears.
+    ///
+    /// A class because the store holds its source privately and correctly does not let a
+    /// test swap it out; mutating the instance it already has is the way to model the world
+    /// changing underneath it. `@unchecked` because the mutation is confined to the test's
+    /// own thread, one read at a time.
+    private final class MutableInstances: InstanceReading, @unchecked Sendable {
+        var stale: [String]
+        init(stale: [String] = []) { self.stale = stale }
+        func read(now: Date) -> InstanceReadingResult {
+            InstanceReadingResult(
+                snapshots: [], rows: [], advice: nil, activeInstance: nil, alerts: [],
+                staleInstances: stale)
         }
     }
 
@@ -50,10 +68,11 @@ final class TelemetryStoreTests: XCTestCase {
 
     private func store(
         instances: [UsageSnapshot] = [], providers: [UsageSnapshot] = [],
-        settings: Settings = Settings(), cache: SnapshotCache? = nil
+        settings: Settings = Settings(), cache: SnapshotCache? = nil,
+        stale: [String] = []
     ) -> TelemetryStore {
         TelemetryStore(
-            instanceSource: StubInstances(snapshots: instances),
+            instanceSource: StubInstances(snapshots: instances, stale: stale),
             providerSource: StubProviders(snapshots: providers),
             cache: cache ?? temporaryCache(),
             settings: settings,
@@ -205,4 +224,39 @@ final class TelemetryStoreTests: XCTestCase {
     private func settle(for duration: Duration = .milliseconds(120)) async {
         try? await Task.sleep(for: duration)
     }
+
+    // MARK: - Stale clones
+
+    /// Prevents: the banner silently disappearing, which restores the exact situation it
+    /// exists to fix — a clone several versions behind that nothing ever mentions.
+    func testStaleClonesReachTheStoreSoThePopoverCanSaySo() {
+        let store = store(stale: ["Work", "Personal"])
+        store.refreshInstances()
+        XCTAssertEqual(store.staleInstances, ["Work", "Personal"])
+    }
+
+    /// Prevents: a permanent banner on an install where every clone is current.
+    func testNothingIsReportedWhenEveryCloneMatches() {
+        let store = store(stale: [])
+        store.refreshInstances()
+        XCTAssertTrue(store.staleInstances.isEmpty)
+    }
+
+    /// Prevents: the list going stale itself.
+    ///
+    /// After a refresh brings the clones into line, the next read has to clear it. A banner
+    /// that outlives the condition teaches people to ignore the banner.
+    func testTheListClearsOnceTheClonesAreBroughtIntoLine() {
+        let source = MutableInstances(stale: ["Work"])
+        let store = TelemetryStore(
+            instanceSource: source, providerSource: StubProviders(),
+            cache: temporaryCache(), settings: Settings(), startTimers: false)
+        store.refreshInstances()
+        XCTAssertEqual(store.staleInstances, ["Work"])
+
+        source.stale = []
+        store.refreshInstances()
+        XCTAssertTrue(store.staleInstances.isEmpty)
+    }
+
 }

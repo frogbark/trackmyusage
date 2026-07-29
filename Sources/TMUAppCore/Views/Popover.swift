@@ -32,6 +32,10 @@ public struct Popover: View {
                 MigrationBanner(text: notice) { store.dismissMigrationNotice() }
             }
 
+            if !store.staleInstances.isEmpty {
+                StaleInstancesBanner(names: store.staleInstances)
+            }
+
             if store.model.claude.isEmpty && store.model.services.isEmpty {
                 Text("No readings yet")
                     .font(.system(size: 13))
@@ -214,6 +218,44 @@ struct SteeringBanner: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
             }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10).fill(Color(Ink.warn).opacity(0.12)))
+    }
+}
+
+/// Says that one or more clones are on a different build from the installed Claude.
+///
+/// Not dismissible, unlike the migration notice. That one reports something that already
+/// finished; this reports a condition that is still true, and a dismiss button on it would
+/// only offer to stop mentioning it — which is the state the app was already in.
+struct StaleInstancesBanner: View {
+    let names: [String]
+
+    private var text: String {
+        let list = names.joined(separator: ", ")
+        return names.count == 1
+            ? "\(list) is on an older Claude build. Clones do not update themselves."
+            : "\(list) are on older Claude builds. Clones do not update themselves."
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .foregroundStyle(Color(Ink.warn))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(text).font(.system(size: 11))
+                    .fixedSize(horizontal: false, vertical: true)
+                // The command rather than a button: refreshing replaces a signed bundle and
+                // refuses while the instance is running, and a click that silently fails
+                // half the time is worse than a line of text that always works.
+                Text("./scripts/refresh-instance.sh --all")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+            Spacer()
         }
         .padding(10)
         .background(

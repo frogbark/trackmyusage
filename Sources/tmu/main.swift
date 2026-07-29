@@ -79,14 +79,34 @@ func cmdInstances() {
     let found = InstanceLocator.discover()
     guard !found.isEmpty else { return print("no Claude instances found") }
 
+    let freshness = Dictionary(
+        found.freshness().map { ($0.instance.bundleID, $0.freshness) },
+        uniquingKeysWith: { first, _ in first })
+
     for inst in found {
         let state = try? ProfileReader.read(name: inst.name, profileURL: inst.profileURL)
         let count = state.map { "\($0.extensions.count) extension(s)" } ?? "profile unreadable"
         print("  \(inst.name)\(inst.isPrimary ? "  (primary)" : "")")
         print("    bundle   \(inst.bundleID)")
         print("    profile  \(inst.profileURL.path)")
+        // The primary states its version and gets no verdict: it is what the clones are
+        // measured against, so "up to date" would be comparing it with itself.
+        if inst.isPrimary {
+            print("    version  \(inst.version ?? "unknown")")
+        } else if let state = freshness[inst.bundleID] {
+            print("    version  \(state.summary)\(state.needsRefresh ? "   ← refresh" : "")")
+        }
         print("    \(count)")
     }
+
+    // Clones are byte copies and do not update themselves. Saying so here is most of the
+    // value: the failure mode is that nothing ever mentions it.
+    let stale = found.needingRefresh
+    guard !stale.isEmpty else { return }
+    let plural = stale.count == 1 ? "instance is" : "instances are"
+    print("")
+    print("\(stale.count) \(plural) on a different build from Claude Desktop.")
+    print("  ./scripts/refresh-instance.sh --all")
 }
 
 func cmdCapture(_ name: String?) {

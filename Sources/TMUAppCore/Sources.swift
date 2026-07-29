@@ -15,6 +15,12 @@ public struct InstanceReadingResult: Sendable {
     public let advice: SteeringAdvice?
     public let activeInstance: String?
     public let alerts: [Alert]
+    /// Clones on a different build from the installed Claude Desktop.
+    ///
+    /// Computed from every discovered instance rather than from `rows`, which only contains
+    /// instances that have usage history to show. A clone nobody has signed into yet is
+    /// still a clone that will not update itself.
+    public let staleInstances: [String]
 
     public struct Alert: Sendable {
         public let account: String
@@ -25,13 +31,15 @@ public struct InstanceReadingResult: Sendable {
 
     public init(
         snapshots: [UsageSnapshot], rows: [TelemetryStore.InstanceRow],
-        advice: SteeringAdvice?, activeInstance: String?, alerts: [Alert]
+        advice: SteeringAdvice?, activeInstance: String?, alerts: [Alert],
+        staleInstances: [String] = []
     ) {
         self.snapshots = snapshots
         self.rows = rows
         self.advice = advice
         self.activeInstance = activeInstance
         self.alerts = alerts
+        self.staleInstances = staleInstances
     }
 }
 
@@ -53,7 +61,8 @@ public struct LocalInstances: InstanceReading {
         var rows: [TelemetryStore.InstanceRow] = []
         var alerts: [InstanceReadingResult.Alert] = []
 
-        for instance in InstanceLocator.discover() {
+        let discovered = InstanceLocator.discover()
+        for instance in discovered {
             let file = instance.profileURL.appendingPathComponent("plan-usage-history.json")
             guard let history = try? UsageHistory.parse(contentsOf: file),
                 !history.samples.isEmpty
@@ -115,7 +124,8 @@ public struct LocalInstances: InstanceReading {
                 .init(
                     account: $0.account, metric: $0.metric, value: $0.value,
                     recommendation: advice.recommended)
-            })
+            },
+            staleInstances: discovered.needingRefresh.map(\.name))
     }
 
     /// Which account is being worked in.
