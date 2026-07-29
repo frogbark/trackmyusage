@@ -185,8 +185,10 @@ func describe(_ snapshots: [UsageSnapshot]) {
             print("  \(snapshot.provider)\(account)   no capped metric")
             continue
         }
+        // The label, not the key. `key` is a stable identifier for storage; this is a
+        // command a person reads, and "five_hour at 2%" is the app's internal vocabulary.
         print(
-            "  \(snapshot.provider)\(account)   \(binding.key) at "
+            "  \(snapshot.provider)\(account)   \(binding.label) at "
                 + String(format: "%.0f%%", value))
     }
 }
