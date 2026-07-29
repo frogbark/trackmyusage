@@ -10,24 +10,32 @@
      button that leads nowhere is a promise the product cannot keep — on a site whose whole
      argument is that its numbers are honest. Link it when Pro ships. -->
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#070c0f">
 <link rel="icon" href="mark.svg">
+<link rel="apple-touch-icon" href="icon.svg">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<div class="wrap">
-    <nav>
-        <img src="mark.svg" alt="">
-        <span class="name">TrackMyUsage</span>
-        <span class="links">
-            <a href="index.html">Home</a>
-            <a href="https://github.com/frogbark/trackmyusage">GitHub ↗</a>
+<nav id="nav">
+    <div class="nav-inner">
+        <a class="nav-brand" href="/">
+            <img src="mark.svg" alt="">
+            <span>TrackMyUsage</span>
+        </a>
+        <span class="nav-links">
+            <a href="/">Home</a>
+            <a class="button ghost" href="https://github.com/frogbark/trackmyusage">GitHub&nbsp;↗</a>
         </span>
-    </nav>
+    </div>
+</nav>
 
-    <header>
+<div class="wrap">
+
+    <header class="hero">
+        <p class="eyebrow">Pricing</p>
         <h1>The tracker is free. The analyst is $49.</h1>
-        <p class="sub">
+        <p class="lead">
             Infrastructure is free, and the truth is never gated. A monitor that hides your
             own numbers behind a paywall cannot be trusted as a monitor — so every raw
             reading, every limit and every notification is in the open-source core, forever.
@@ -63,23 +71,41 @@
                     <li>Unlimited history and a weekly digest</li>
                     <li>iOS app, widgets and Watch complications</li>
                 </ul>
-                <p class="counts" style="margin-top:22px">
-                    Not available yet. <a href="https://github.com/frogbark/trackmyusage">Watch
-                    the repository</a> and it will be announced there.
+                <p class="layout-note" style="margin-top:22px">
+                    <b>Not available yet.</b>
+                    <a href="https://github.com/frogbark/trackmyusage">Watch the repository</a>
+                    and it will be announced there. Nothing in the project charges for
+                    anything today.
                 </p>
             </div>
         </div>
 
-        <p class="counts" style="margin-top:26px">
+        <p class="layout-note" style="margin-top:26px">
             One licence covers all your devices. Pro checks a signed licence file; the daemon
             never phones home with your usage.
         </p>
     </section>
 
-    <footer>
-        <p><a href="index.html">← Back</a></p>
-    </footer>
 </div>
+
+<footer>
+    <div class="wrap">
+        <div class="foot-grid">
+            <span class="foot-brand">
+                <img src="mark.svg" alt="">
+                TrackMyUsage
+            </span>
+            <span class="foot-links">
+                <a href="/">Home</a>
+                <a href="https://github.com/frogbark/trackmyusage">GitHub ↗</a>
+            </span>
+        </div>
+        <p>
+            TrackMyUsage never bundles or redistributes Claude Desktop, and each instance still
+            requires its own paid Anthropic account. Not affiliated with Anthropic.
+        </p>
+    </div>
+</footer>
 
 </body>
 </html>
