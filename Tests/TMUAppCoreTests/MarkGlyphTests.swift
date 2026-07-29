@@ -195,9 +195,13 @@ final class MarkGlyphTests: XCTestCase {
         guard let dir = ProcessInfo.processInfo.environment["TMU_GLYPH_DIR"] else {
             throw XCTSkip("set TMU_GLYPH_DIR to write a preview")
         }
-        let pill = HStack(spacing: 4) {
-            MarkGlyph(peak: .warn, height: 16)
-            Text("2% · 20%").monospacedDigit().font(.system(size: 13))
+        // The live view rather than nsImage(): an ImageRenderer nested inside another one
+        // yields nothing, so the bitmap path cannot be previewed this way. Same geometry
+        // either way — the bitmap is rendered from this view at the same width — and the
+        // spacing constant is shared with the label, which is what is being looked at here.
+        let pill = HStack(spacing: MenuBarPill.markSpacing) {
+            MarkGlyph(peak: .ok, height: 16)
+            Text("3% · 21%").monospacedDigit().font(.system(size: 13))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
