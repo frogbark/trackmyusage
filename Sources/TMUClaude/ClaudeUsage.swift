@@ -74,11 +74,18 @@ public enum ClaudeUsage {
         guard let window = metric.window else {
             return Metric(
                 key: key(of: metric), kind: .absolute, value: value,
-                limit: nil, window: .none, resetsAt: nil)
+                limit: nil, window: .none, resetsAt: nil,
+                label: metric.displayName)
         }
+        // The label matters as much as the number. Without it Metric falls back to the raw
+        // key, and every surface that shows what a percentage is a percentage *of* reads
+        // "five_hour" and "seven_day" — which is the app's internal vocabulary, not
+        // anybody's. UsageMetric has carried the readable names all along; `tmu usage` has
+        // been printing them since before the app could.
         return Metric(
             key: key(of: metric), kind: .percentOfLimit, value: value,
-            limit: nil, window: .rolling(window), resetsAt: nil)
+            limit: nil, window: .rolling(window), resetsAt: nil,
+            label: metric.displayName)
     }
 
     /// Stable keys, matching the names in the app's own limit map rather than inventing

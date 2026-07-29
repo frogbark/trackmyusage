@@ -6,61 +6,48 @@ import TMUDesign
 /// The design asks for a menu-bar *template* image whose third bar tints warn or over. Those
 /// two requirements are mutually exclusive: a template image is monochrome by definition —
 /// AppKit throws its colour away and re-tints the whole thing to match the menu bar. Drawing
-/// it as a `Path` satisfies both, adds no binary to the repository, needs no build step, and
-/// is Retina-correct for free.
+/// it satisfies both, adds no binary to the repository and needs no build step.
 ///
-/// The geometry is the brand spec: heights 17/31/47 in an 84pt tile, bar width 11, gap 6,
-/// corner radius 3. Everything scales from that ratio, so the same code serves the menu bar
-/// glyph, the app icon and the website mark.
+/// Built from three `RoundedRectangle`s rather than a `Canvas`. A `MenuBarExtra` label is
+/// rasterised by AppKit into the status item rather than composited like ordinary SwiftUI,
+/// and `Canvas` draws nothing there — the pill shipped showing only its percentages, with no
+/// error anywhere to say the mark was missing. Plain shapes go through layout, which works.
+///
+/// The geometry comes from `BrandMark`, shared with the app icon and the website mark so the
+/// three cannot drift: heights 17/31/47 in an 84pt tile, bar width 11, gap 6, radius 3.
 public struct MarkGlyph: View {
 
-    /// The state of the *worst* reading, which is what the third bar reports.
+    /// The state of the worst reading anywhere, which is what the third bar reports.
     public let peak: UsageState
     public let isStale: Bool
+    /// Menu bar glyphs are 16pt tall by convention.
+    public var height: CGFloat
 
-    public init(peak: UsageState = .ok, isStale: Bool = false) {
+    public init(peak: UsageState = .ok, isStale: Bool = false, height: CGFloat = 16) {
         self.peak = peak
         self.isStale = isStale
-    }
-
-    /// Design-space constants, from the brand spec.
-    static let tile: CGFloat = 84
-    static let heights: [CGFloat] = [17, 31, 47]
-    static let barWidth: CGFloat = 11
-    static let gap: CGFloat = 6
-
-    static var designWidth: CGFloat {
-        CGFloat(heights.count) * barWidth + CGFloat(heights.count - 1) * gap
+        self.height = height
     }
 
     public var body: some View {
-        Canvas { context, size in
-            let scale = size.height / Self.tile
-            let width = Self.barWidth * scale
-            let gap = Self.gap * scale
-            let radius = 3 * scale
-
-            for (index, height) in Self.heights.enumerated() {
-                let barHeight = height * scale
-                let rect = CGRect(
-                    x: CGFloat(index) * (width + gap),
-                    y: size.height - barHeight,
-                    width: width, height: barHeight)
-                context.fill(
-                    Path(roundedRect: rect, cornerRadius: radius),
-                    with: .color(colour(for: index)))
+        let scale = height / BrandMark.designTile
+        HStack(alignment: .bottom, spacing: BrandMark.barGap * scale) {
+            ForEach(Array(BrandMark.barHeights.enumerated()), id: \.offset) { index, bar in
+                RoundedRectangle(cornerRadius: BrandMark.barRadius * scale, style: .continuous)
+                    .fill(colour(for: index))
+                    .frame(width: BrandMark.barWidth * scale, height: bar * scale)
             }
         }
-        .frame(width: Self.designWidth / Self.tile * 16, height: 16)
-        // Stale mutes the whole mark, matching what the `?` suffix says beside it — the
+        .frame(height: height, alignment: .bottom)
+        // Stale mutes the whole mark, matching what the `?` beside it already says: the
         // reading is not necessarily wrong, but it is not necessarily now.
         .opacity(isStale ? 0.55 : 1)
     }
 
-    /// Bars one and two carry the menu bar's own foreground so the glyph adapts to light and
-    /// dark and to the highlighted state; only the third reports.
+    /// Bars one and two take the menu bar's own foreground, so the glyph keeps adapting to
+    /// light and dark and to the highlighted state. Only the third one reports.
     private func colour(for index: Int) -> Color {
-        guard index == Self.heights.count - 1 else { return .primary }
+        guard index == BrandMark.barHeights.count - 1 else { return .primary }
         switch peak {
         case .warn, .over: return Color(peak.ink)
         case .ok, .nodata, .uncapped: return .primary

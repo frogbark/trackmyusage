@@ -109,4 +109,24 @@ final class ClaudeUsageTests: XCTestCase {
             snapshot.account, "Personal",
             "several Claude accounts coexist, so the snapshot must say which one")
     }
+
+    /// Every surface that shows what a percentage is a percentage *of* reads this label.
+    ///
+    /// `Metric.label` falls back to `key` when none is given, so omitting it does not fail —
+    /// it just quietly puts the app's internal vocabulary on screen. The menu bar shipped
+    /// reading "five_hour" and "seven_day" under the account names, and UsageMetric had
+    /// carried the readable versions the whole time.
+    func testMetricsCarryTheReadableWindowNameRatherThanTheStorageKey() {
+        let snapshot = ClaudeUsage.snapshot(
+            of: account([(t0, [.fiveHour: 78, .sevenDay: 40])]))
+
+        let labels: [String] = snapshot.metrics.map { $0.label }
+        XCTAssertFalse(
+            labels.contains(where: { $0.contains("_") }),
+            "a label with an underscore is a storage key that reached the screen: \(labels)")
+        XCTAssertTrue(
+            labels.contains("5-hour") || labels.contains("Weekly"),
+            "expected UsageMetric.displayName, got \(labels)")
+    }
+
 }
