@@ -53,12 +53,13 @@ instance_identity() {
 #
 # Use this, never instance_identity, when modifying a bundle that already exists.
 #
-# The two are not interchangeable and this install proves it. `Claude Two.app` has
-# CFBundleDisplayName "Claude Two" and bundle id `…claudruple.two` — the slug does not
-# follow the display name, because the instance predates the current derivation. Deriving
-# on refresh would have stamped `…claudruple.claude-two` over it: a different id, so a
-# different signed identity and a LaunchServices registration pointing at an app that no
-# longer answers to it. Nothing would have reported an error.
+# The two are not interchangeable and a real install proves it. One clone has
+# CFBundleDisplayName "Claude Two" and bundle id com.anthropic.claudefordesktop.claudruple.two
+# — the slug does not follow the display name, because the instance predates the current
+# derivation. Deriving on refresh would have stamped
+# com.anthropic.claudefordesktop.claudruple.claude-two over it: a different id, so a different
+# signed identity and a LaunchServices registration pointing at an app that no longer answers
+# to it. Nothing would have reported an error.
 #
 # instance_identity remains correct for *creating* an instance, where there is no existing
 # identity and the name is all there is.
