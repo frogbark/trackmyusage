@@ -19,7 +19,7 @@ SRC_DATA="$SUPPORT/Parall/Claude 2"
 DST_DATA="$SUPPORT/Claudruple/Claude Two"
 CLONE="/Applications/Claudruple/Claude Two.app"
 PRIMARY="/Applications/Claude.app"
-BROKER="/Applications/Claudruple/TrackMyUsage Link.app"
+BROKER="/Applications/TrackMyUsage Link.app"
 GHOST="/Applications/Claude 2.app"
 LSREG="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
@@ -142,6 +142,6 @@ cat <<'NEXT'
 
 Check both windows show the right account, then remove Parall:
 
-    ~/claudedruple/scripts/remove-parall.sh
+    ./scripts/remove-parall.sh
 
 NEXT

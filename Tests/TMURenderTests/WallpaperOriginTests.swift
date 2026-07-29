@@ -119,4 +119,34 @@ final class WallpaperOriginTests: XCTestCase {
         XCTAssertNotEqual(first, second)
         XCTAssertEqual(third, first, "two names are enough to guarantee a change")
     }
+
+    /// A render recorded under the pre-rename cache directory.
+    ///
+    /// This is not hypothetical: it was in this machine's state.json. `isInside` only rejects
+    /// the *current* output directory, so a path pointing at
+    /// ~/Library/Caches/Claudruple/wallpaper/desktop-a.png passed the check, and the only
+    /// thing that stopped it becoming the permanent background was the readability test
+    /// happening to fail because migration had already moved the file.
+    ///
+    /// Accepting it would darken the desktop a little every five minutes, forever, with
+    /// nothing reporting an error.
+    func testOneOfOurRendersIsRefusedEvenFromAnotherDirectory() {
+        let legacy = URL(
+            fileURLWithPath: "/Users/x/Library/Caches/Claudruple/wallpaper/desktop-a.png")
+        XCTAssertNil(
+            WallpaperOrigin.pristine(
+                current: legacy, remembered: nil, outputDirectory: output,
+                isReadable: { _ in true }),
+            "a file named like our output is ours wherever it sits")
+    }
+
+    func testARealWallpaperWithAnUnrelatedNameIsStillAccepted() {
+        let real = URL(fileURLWithPath: "/Users/x/Pictures/lake.jpg")
+        XCTAssertEqual(
+            WallpaperOrigin.pristine(
+                current: real, remembered: nil, outputDirectory: output,
+                isReadable: { _ in true }),
+            real)
+    }
+
 }

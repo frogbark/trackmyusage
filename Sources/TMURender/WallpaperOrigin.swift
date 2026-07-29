@@ -24,6 +24,7 @@ public enum WallpaperOrigin {
     ) -> URL? {
         for candidate in [current, remembered].compactMap({ $0 }) {
             guard !isInside(candidate, outputDirectory) else { continue }
+            guard !isOurs(candidate) else { continue }
             guard isReadable(candidate) else { continue }
             return candidate
         }
@@ -47,6 +48,21 @@ public enum WallpaperOrigin {
     /// `…/TrackMyUsage/wallpaper-backups/lake.jpg` begins with `…/TrackMyUsage/wallpaper` as
     /// characters while being a different directory entirely. A prefix test would classify
     /// a real photograph as our own output and throw it away.
+    /// One of our own renders, wherever it happens to live.
+    ///
+    /// `isInside` only rejects the *current* output directory, which is not enough. A path
+    /// recorded before the rename points into `~/Library/Caches/Claudruple/wallpaper/`, a
+    /// directory the current check does not recognise as ours — and this machine had exactly
+    /// that in its state file. Nothing caught it except the readability check happening to
+    /// fail because the file had already moved.
+    ///
+    /// The failure it guards against is quiet and cumulative: composite the overlay onto a
+    /// previous overlay and the desktop darkens a little every five minutes, with no error
+    /// anywhere. So the filename is checked too, since those names are ours alone.
+    static func isOurs(_ url: URL) -> Bool {
+        names.contains(url.lastPathComponent)
+    }
+
     private static func isInside(_ url: URL, _ directory: URL) -> Bool {
         let child = resolve(url)
         let parent = resolve(directory)

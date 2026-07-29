@@ -16,17 +16,25 @@ public enum Migration {
     /// nothing to do or another process holds the lock.
     ///
     /// Never throws. A failure here must not stop the program the user actually asked for.
+    /// - Parameter force: re-probe even when the receipt says there is nothing to do.
+    ///
+    ///   A step can be *skipped* because its precondition is not met yet rather than because
+    ///   there is nothing to do — the launch agents wait for their binaries to be installed.
+    ///   A skip is not a failure, so the receipt reads complete and the fast path below would
+    ///   never look again. `tmud --migrate` passes this to say "look again, I have changed
+    ///   something".
     @discardableResult
     public static func runOnceIfNeeded(
         home: URL = FileManager.default.homeDirectoryForCurrentUser,
         legacyKeychainService: String,
-        newKeychainService: String
+        newKeychainService: String,
+        force: Bool = false
     ) -> MigrationReceipt? {
         let receiptURL = receiptURL(home: home)
 
         // Fast path: one stat. This runs on every single invocation of every binary, so it
         // has to cost approximately nothing once migration is behind us.
-        if let existing = loadReceipt(receiptURL), existing.isComplete { return nil }
+        if !force, let existing = loadReceipt(receiptURL), existing.isComplete { return nil }
 
         let files = SystemFileMover()
         let environment = MigrationEnvironment(
@@ -46,7 +54,7 @@ public enum Migration {
 
         // Re-check under the lock: another process may have finished between the fast path
         // and here, and running the plan twice would move an already-moved directory.
-        if let existing = loadReceipt(receiptURL), existing.isComplete { return nil }
+        if !force, let existing = loadReceipt(receiptURL), existing.isComplete { return nil }
 
         let receipt = MigrationRunner(
             home: home,

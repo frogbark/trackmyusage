@@ -7,7 +7,10 @@
 set -euo pipefail
 
 LABEL="com.trackmyusage.link"
-APP="${APP:-/Applications/Claudruple/TrackMyUsage Link.app}"
+# /Applications, not /Applications/Claudruple. That directory is frozen because *clones*
+# are registered with LaunchServices from it; the broker is an ordinary app of ours and has
+# no reason to live inside the clones directory. Override with APP= if yours is elsewhere.
+APP="${APP:-/Applications/TrackMyUsage Link.app}"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 BIN="$APP/Contents/MacOS/TrackMyUsage Link"
 

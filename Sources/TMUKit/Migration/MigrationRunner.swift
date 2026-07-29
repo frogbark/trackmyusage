@@ -173,8 +173,8 @@ public struct MigrationRunner: Sendable {
             return .skipped(
                 """
                 \(waiting.joined(separator: ", ")) still points at a binary that does not \
-                exist yet — rebuild and re-run the install scripts, then migration will \
-                finish this step
+                exist yet — install the apps, then run `tmud --migrate`. A skip is not a \
+                failure, so nothing retries this on its own.
                 """)
         }
         return migrated == 0 ? .skipped("no legacy agents installed") : .done
