@@ -69,7 +69,7 @@ private struct MenuBarLabel: View {
     @ObservedObject var store: TelemetryStore
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: MenuBarPill.markSpacing) {
             // An Image, not the view itself. A MenuBarExtra label renders Text and Image and
             // silently declines shapes — the mark drew correctly in every other context and
             // came out as an empty gap here, twice, with nothing to say why.
