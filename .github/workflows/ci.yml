@@ -69,7 +69,14 @@ jobs:
 
       - name: Lint
         # `swift format` is a toolchain subcommand as of Swift 6 — nothing to install.
-        run: swift format lint --strict --recursive Sources Tests
+        #
+        # Its config schema and its output both move between Swift releases, and the runner
+        # will not always match a contributor's laptop. The version is surfaced here so that
+        # a formatting failure nobody can reproduce locally has an obvious first suspect —
+        # `.swift-format` deliberately avoids keys whose type has changed across versions.
+        run: |
+          echo "::notice::swift format $(swift format --version)"
+          swift format lint --strict --recursive Sources Tests
 
   portability:
     name: Provider SDK builds without a platform
