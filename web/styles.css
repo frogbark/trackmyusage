@@ -1093,6 +1093,23 @@ footer a {
     margin-left: 10px;
 }
 
+/* ---------------------------------------------------------------- Spacing utilities */
+
+/* These exist so the markup carries no `style` attributes. Inline styles would force
+   `style-src 'unsafe-inline'` into the Content-Security-Policy in vercel.json, which is a
+   real weakening of the policy to save four rules. */
+.spaced {
+    margin-top: 24px;
+}
+
+.stacked {
+    margin-top: 14px;
+}
+
+.footnote {
+    margin: 26px 0 0;
+}
+
 /* ---------------------------------------------------------------- Motion */
 
 /* Scroll reveal, gated on `.js` — which is set by an inline script in the head, and only
