@@ -189,6 +189,39 @@ final class MarkGlyphTests: XCTestCase {
             image.representations.first?.pixelsWide ?? 0, 0, "the bitmap has no pixels")
     }
 
+    /// The gap has to be inside the bitmap, because that is the only place it survives.
+    ///
+    /// `HStack(spacing:)` around a MenuBarExtra label does nothing on screen — set to 7 and
+    /// shipped, the pill looked exactly as it had at 4. The label ignores the stack's spacing
+    /// the same way it ignores shapes. Padding rendered into the image is geometry the status
+    /// item cannot discard, so this checks the bitmap actually widened and that the extra
+    /// width is empty rather than more mark.
+    func testTheGapIsBakedIntoTheBitmapRatherThanAskedForInAStack() throws {
+        let glyph = MarkGlyph(peak: .ok, height: 16)
+        let flush = try XCTUnwrap(glyph.nsImage(trailingGap: 0))
+        let spaced = try XCTUnwrap(glyph.nsImage(trailingGap: 7))
+
+        XCTAssertEqual(
+            spaced.size.width - flush.size.width, 7, accuracy: 0.5,
+            "the bitmap has to carry the gap; a stack's spacing is ignored here")
+
+        // And the added width must be transparent, not more bars.
+        //
+        // Via cgImage rather than `representations.first as? NSBitmapImageRep`:
+        // NSImage(cgImage:size:) does not store a bitmap rep, so that cast is always nil.
+        var rect = CGRect(origin: .zero, size: spaced.size)
+        let cg = try XCTUnwrap(spaced.cgImage(forProposedRect: &rect, context: nil, hints: nil))
+        let rep = NSBitmapImageRep(cgImage: cg)
+        let scale = Double(rep.pixelsWide) / Double(spaced.size.width)
+        let firstGapColumn = Int((flush.size.width + 1) * scale)
+        for x in firstGapColumn..<rep.pixelsWide {
+            for y in 0..<rep.pixelsHigh {
+                let alpha = rep.colorAt(x: x, y: y)?.alphaComponent ?? 0
+                XCTAssertLessThan(alpha, 0.1, "column \(x) should be empty gap, not mark")
+            }
+        }
+    }
+
     /// Writes the pill as the menu bar composes it, so a person can look at it.
     /// Skipped unless TMU_GLYPH_DIR is set.
     func testWritePreview() throws {

@@ -69,11 +69,15 @@ private struct MenuBarLabel: View {
     @ObservedObject var store: TelemetryStore
 
     var body: some View {
-        HStack(spacing: MenuBarPill.markSpacing) {
+        // Zero spacing: the gap is inside the mark's bitmap, because the label ignores this
+        // stack's spacing entirely. Setting both would double it.
+        HStack(spacing: 0) {
             // An Image, not the view itself. A MenuBarExtra label renders Text and Image and
             // silently declines shapes — the mark drew correctly in every other context and
             // came out as an empty gap here, twice, with nothing to say why.
-            if let mark = MarkGlyph(peak: peak, isStale: anyStale).nsImage() {
+            if let mark = MarkGlyph(peak: peak, isStale: anyStale)
+                .nsImage(trailingGap: MenuBarPill.markSpacing)
+            {
                 Image(nsImage: mark)
             }
             Text(title).monospacedDigit()
