@@ -38,11 +38,15 @@ DEST_DIR="${DEST_DIR:-/Applications/Claudruple}"
 IDENTITY="${IDENTITY:--}"
 LSREG="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
-slug=$(printf '%s' "$NAME" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//')
-APP="$DEST_DIR/$NAME.app"
-BUNDLE_ID="com.anthropic.claudefordesktop.claudruple.$slug"
-UDD="$HOME/Library/Application Support/Claudruple/$NAME"
-REALBIN="$NAME Bin"
+# Identity comes from the shared derivation, because refresh-instance.sh has to reproduce
+# it exactly on a bundle that already exists. See scripts/lib/instance-identity.sh.
+# shellcheck source=lib/instance-identity.sh
+source "$ROOT/scripts/lib/instance-identity.sh"
+instance_identity "$NAME"
+APP="$INSTANCE_APP"
+BUNDLE_ID="$INSTANCE_BUNDLE_ID"
+UDD="$INSTANCE_PROFILE"
+REALBIN="$INSTANCE_REALBIN"
 
 say() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 ok()  { printf '    \033[32m✓\033[0m %s\n' "$1"; }

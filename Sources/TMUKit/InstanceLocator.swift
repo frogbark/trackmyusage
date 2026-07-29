@@ -8,6 +8,24 @@ public struct DiscoveredInstance: Sendable, Equatable {
     public let profileURL: URL
     /// True for `/Applications/Claude.app`, which TrackMyUsage never modifies.
     public let isPrimary: Bool
+    /// `CFBundleShortVersionString`, or nil when the bundle would not say.
+    ///
+    /// Optional rather than defaulted to a placeholder: a clone whose version cannot be
+    /// read is a different situation from one that matches, and `InstanceFreshness` keeps
+    /// them apart rather than reporting the unreadable one as fine.
+    public let version: String?
+
+    public init(
+        name: String, bundleID: String, appURL: URL, profileURL: URL, isPrimary: Bool,
+        version: String? = nil
+    ) {
+        self.name = name
+        self.bundleID = bundleID
+        self.appURL = appURL
+        self.profileURL = profileURL
+        self.isPrimary = isPrimary
+        self.version = version
+    }
 }
 
 /// Finds Claude instances and maps each to the profile directory it actually uses.
@@ -83,6 +101,38 @@ public enum InstanceLocator {
             bundleID: bundleID,
             appURL: appURL,
             profileURL: profileURL(bundleID: bundleID, displayName: name, home: home),
-            isPrimary: bundleID == primaryBundleID)
+            isPrimary: bundleID == primaryBundleID,
+            version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString")
+                as? String)
+    }
+}
+
+extension Collection where Element == DiscoveredInstance {
+
+    /// The version of `/Applications/Claude.app`, which every clone is measured against.
+    ///
+    /// The primary is the reference rather than a participant: it is the thing being cloned
+    /// from, and TrackMyUsage never modifies it.
+    public var installedClaudeVersion: String? {
+        first(where: \.isPrimary)?.version
+    }
+
+    /// Each clone paired with how it compares to the installed Claude.
+    ///
+    /// The primary is excluded because "is Claude the same version as Claude" is not a
+    /// question, and including it would put a permanent `up to date` row in every listing
+    /// that says nothing.
+    public func freshness() -> [(instance: DiscoveredInstance, freshness: InstanceFreshness)] {
+        let installed = installedClaudeVersion
+        return
+            filter { !$0.isPrimary }
+            .map {
+                ($0, InstanceFreshness.compare(clone: $0.version, installed: installed))
+            }
+    }
+
+    /// Clones that are on a different build from the installed Claude.
+    public var needingRefresh: [DiscoveredInstance] {
+        freshness().filter(\.freshness.needsRefresh).map(\.instance)
     }
 }

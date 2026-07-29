@@ -42,6 +42,12 @@ public final class TelemetryStore: ObservableObject {
     /// Set when migration left a step undone. Surfaced once in the UI rather than swallowed:
     /// being honestly incomplete beats being quietly wrong.
     @Published public private(set) var migrationNotice: String?
+    /// Clones on a different build from the installed Claude Desktop.
+    ///
+    /// Surfaced in the popover because the failure mode is silence: a clone several versions
+    /// behind launches, signs in and works, and nothing anywhere says otherwise until
+    /// something server-side stops accommodating it.
+    @Published public private(set) var staleInstances: [String] = []
 
     private let instanceSource: any InstanceReading
     private let providerSource: any ProviderReadingSource
@@ -99,6 +105,7 @@ public final class TelemetryStore: ObservableObject {
         let reading = instanceSource.read(now: Date())
         instanceSnapshots = reading.snapshots
         instances = reading.rows
+        staleInstances = reading.staleInstances
         advice = reading.advice
         activeInstance = reading.activeInstance
         rebuild()

@@ -54,7 +54,7 @@ Three rules the engine enforces rather than documents:
 - **Extension settings are not copied.** They hold `api_key` and `allowed_directories`;
   sync moves tooling between accounts, not the authority to use it.
 
-**Still open:** re-cloning instances when Claude updates, a tinted icon per instance, and
+**Still open:** a tinted icon per instance, and
 instance management in the GUI rather than only the CLI.
 
 ## Usage and steering ✅
@@ -89,14 +89,14 @@ seconds could stall a render for four minutes; in parallel the slowest one sets 
 A provider is included when it needs no credential or has one stored — fetching an
 unconfigured one would spend a render cycle drawing "unauthorized" on someone's desktop.
 
-**Still open:** running it on a schedule rather than on demand, and per-display density
-selection.
+**Still open:** per-display density selection. (Running on a schedule shipped as
+`install-wallpaper-agent.sh`, a login agent on a five-minute interval.)
 
 ---
 
 ## Provider adapters — in progress
 
-Four of seventeen. The rest are absent rather than stubbed, and that is the whole policy: a
+Five of seventeen. The rest are absent rather than stubbed, and that is the whole policy: a
 parser written from a remembered API shape is indistinguishable from a correct one until it
 reports the wrong number, and a usage dashboard that is quietly wrong is worse than one that
 is honestly incomplete.
