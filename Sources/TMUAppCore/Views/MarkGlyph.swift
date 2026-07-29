@@ -73,9 +73,16 @@ public struct MarkGlyph: View {
     /// a colour into a bitmap gives up the automatic light/dark adaptation a live view had.
     /// The store refreshes every thirty seconds, so a system appearance change corrects
     /// itself within one cycle.
+    /// - Parameter trailingGap: transparent space baked into the right of the bitmap.
+    ///
+    ///   The gap has to live *inside* the image. A `MenuBarExtra` label ignores the spacing
+    ///   of the stack it is given — the same way it ignores shapes — so `HStack(spacing:)`
+    ///   changes nothing on screen no matter what it says. Padding rendered into the bitmap
+    ///   is geometry the status item cannot discard.
     @MainActor
-    public func nsImage(appearance: NSAppearance? = nil) -> NSImage? {
-        let renderer = ImageRenderer(content: self.environment(\.colorScheme, scheme(appearance)))
+    public func nsImage(appearance: NSAppearance? = nil, trailingGap: CGFloat = 0) -> NSImage? {
+        let padded = self.padding(.trailing, trailingGap)
+        let renderer = ImageRenderer(content: padded.environment(\.colorScheme, scheme(appearance)))
         // Never below 2x, whatever NSScreen says. The app can start before a screen is
         // known — and CI has no screen at all, where `main` reports 1x — and a menu bar
         // glyph baked at 1x stays soft for the life of the process, because this bitmap is
@@ -84,7 +91,7 @@ public struct MarkGlyph: View {
         renderer.scale = max(2, NSScreen.main?.backingScaleFactor ?? 2)
         guard let cgImage = renderer.cgImage else { return nil }
         let image = NSImage(
-            cgImage: cgImage, size: NSSize(width: width, height: height))
+            cgImage: cgImage, size: NSSize(width: width + trailingGap, height: height))
         image.isTemplate = false
         return image
     }
