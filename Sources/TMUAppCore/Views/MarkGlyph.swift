@@ -29,8 +29,18 @@ public struct MarkGlyph: View {
         self.height = height
     }
 
+    /// Scaled from the tallest bar, not from the tile.
+    ///
+    /// `BrandMark.designTile` is 84 with the bars topping out at 47, because the app icon
+    /// needs breathing room inside its rounded square. A menu bar glyph has no tile and no
+    /// padding — dividing by 84 made a "16pt" glyph 9pt tall and 8.6pt wide, which on a
+    /// status bar reads as nothing at all. It was there; it was a smudge.
+    private var scale: CGFloat {
+        height / (BrandMark.barHeights.max() ?? BrandMark.designTile)
+    }
+
     public var body: some View {
-        let scale = height / BrandMark.designTile
+        let scale = self.scale
         HStack(alignment: .bottom, spacing: BrandMark.barGap * scale) {
             ForEach(Array(BrandMark.barHeights.enumerated()), id: \.offset) { index, bar in
                 RoundedRectangle(cornerRadius: BrandMark.barRadius * scale, style: .continuous)
@@ -47,10 +57,10 @@ public struct MarkGlyph: View {
     /// Bars one and two take the menu bar's own foreground, so the glyph keeps adapting to
     /// light and dark and to the highlighted state. Only the third one reports.
     private func colour(for index: Int) -> Color {
-        guard index == BrandMark.barHeights.count - 1 else { return .primary }
+        guard index == BrandMark.barHeights.count - 1 else { return Color(nsColor: .labelColor) }
         switch peak {
         case .warn, .over: return Color(peak.ink)
-        case .ok, .nodata, .uncapped: return .primary
+        case .ok, .nodata, .uncapped: return Color(nsColor: .labelColor)
         }
     }
 }
