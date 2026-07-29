@@ -180,9 +180,12 @@ final class MarkGlyphTests: XCTestCase {
         XCTAssertFalse(
             image.isTemplate,
             "a template is monochrome, and the third bar has to be able to turn amber")
-        XCTAssertGreaterThan(
-            image.representations.first?.pixelsWide ?? 0, Int(glyph.width),
-            "rendered below 1x, so it would be soft on a Retina menu bar")
+        // Oversampled, not merely non-zero. Asserting "> width" only proved the renderer
+        // used at least 1x, which is what a headless CI machine reports and what would look
+        // soft on every Mac sold this decade.
+        XCTAssertGreaterThanOrEqual(
+            Double(image.representations.first?.pixelsWide ?? 0), Double(glyph.width) * 1.5,
+            "the bitmap is built once per refresh, so a 1x bake stays soft until the next one")
     }
 
     /// Writes the pill as the menu bar composes it, so a person can look at it.
