@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import TMUDesign
 
@@ -8,10 +9,12 @@ import TMUDesign
 /// AppKit throws its colour away and re-tints the whole thing to match the menu bar. Drawing
 /// it satisfies both, adds no binary to the repository and needs no build step.
 ///
-/// Built from three `RoundedRectangle`s rather than a `Canvas`. A `MenuBarExtra` label is
-/// rasterised by AppKit into the status item rather than composited like ordinary SwiftUI,
-/// and `Canvas` draws nothing there — the pill shipped showing only its percentages, with no
-/// error anywhere to say the mark was missing. Plain shapes go through layout, which works.
+/// Built from three `RoundedRectangle`s, and — for the menu bar — rasterised to an `NSImage`
+/// by `nsImage()` before being handed over. A `MenuBarExtra` label renders `Text` and `Image`
+/// and quietly declines most else. `Canvas` drew nothing there. Shapes drew nothing there
+/// either, though they draw correctly in every other context including `ImageRenderer`. In
+/// both cases there was no error, no warning and no missing symbol — the pill simply came out
+/// as two percentages with a gap. An `Image` is the thing the label will actually accept.
 ///
 /// The geometry comes from `BrandMark`, shared with the app icon and the website mark so the
 /// three cannot drift: heights 17/31/47 in an 84pt tile, bar width 11, gap 6, radius 3.
@@ -52,6 +55,46 @@ public struct MarkGlyph: View {
         // Stale mutes the whole mark, matching what the `?` beside it already says: the
         // reading is not necessarily wrong, but it is not necessarily now.
         .opacity(isStale ? 0.55 : 1)
+    }
+
+    /// The mark as a bitmap, for places that will not draw a view.
+    ///
+    /// A `MenuBarExtra` label is not an ordinary SwiftUI container. It renders `Text` and
+    /// `Image` and quietly declines most else — the shapes above draw correctly everywhere
+    /// they were tested, including `ImageRenderer`, and drew nothing at all in the status
+    /// bar. No error, no warning, no missing symbol; the pill simply came out as two
+    /// percentages with a gap where the mark should be.
+    ///
+    /// So the label gets an `Image` instead, rasterised here from the same view. Not a
+    /// template image: those are monochrome by definition, and the third bar has to be able
+    /// to turn amber, which is the one thing the mark is for at 16 points.
+    ///
+    /// `labelColor` is resolved against the current appearance at render time, since baking
+    /// a colour into a bitmap gives up the automatic light/dark adaptation a live view had.
+    /// The store refreshes every thirty seconds, so a system appearance change corrects
+    /// itself within one cycle.
+    @MainActor
+    public func nsImage(appearance: NSAppearance? = nil) -> NSImage? {
+        let renderer = ImageRenderer(content: self.environment(\.colorScheme, scheme(appearance)))
+        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        guard let cgImage = renderer.cgImage else { return nil }
+        let image = NSImage(
+            cgImage: cgImage, size: NSSize(width: width, height: height))
+        image.isTemplate = false
+        return image
+    }
+
+    /// How wide the mark renders, so callers can size a frame without guessing.
+    public var width: CGFloat {
+        let scale = self.scale
+        return CGFloat(BrandMark.barHeights.count) * BrandMark.barWidth * scale
+            + CGFloat(BrandMark.barHeights.count - 1) * BrandMark.barGap * scale
+    }
+
+    private func scheme(_ appearance: NSAppearance?) -> ColorScheme {
+        let effective = appearance ?? NSApp?.effectiveAppearance
+        let match = effective?.bestMatch(from: [.aqua, .darkAqua])
+        return match == .darkAqua ? .dark : .light
     }
 
     /// Bars one and two take the menu bar's own foreground, so the glyph keeps adapting to

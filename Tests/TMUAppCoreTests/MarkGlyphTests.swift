@@ -166,6 +166,25 @@ final class MarkGlyphTests: XCTestCase {
             """)
     }
 
+    /// The menu bar gets a bitmap, so the bitmap has to exist and have the right shape.
+    ///
+    /// This is the path the status item actually uses. The live view is only a source for it
+    /// — `MenuBarExtra` will not draw shapes, so `body` being correct proves nothing about
+    /// what appears on screen.
+    func testTheMenuBarBitmapIsProducedAtTheRightSize() throws {
+        let glyph = MarkGlyph(peak: .warn, height: 16)
+        let image = try XCTUnwrap(glyph.nsImage(), "the pill has nothing to draw")
+
+        XCTAssertEqual(image.size.height, 16, accuracy: 0.5)
+        XCTAssertEqual(image.size.width, glyph.width, accuracy: 0.5)
+        XCTAssertFalse(
+            image.isTemplate,
+            "a template is monochrome, and the third bar has to be able to turn amber")
+        XCTAssertGreaterThan(
+            image.representations.first?.pixelsWide ?? 0, Int(glyph.width),
+            "rendered below 1x, so it would be soft on a Retina menu bar")
+    }
+
     /// Writes the pill as the menu bar composes it, so a person can look at it.
     /// Skipped unless TMU_GLYPH_DIR is set.
     func testWritePreview() throws {
