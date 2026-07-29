@@ -59,7 +59,11 @@ let package = Package(
                 "TMUDesktop", "TMURender", "TMUProviders",
                 "TMUClaude", "TMUKit",
             ]),
-        .executableTarget(name: "tmu", dependencies: ["TMUKit", "TMUProviders", "TMUDesign"]),
+        // TMURender is here only for `assets wallpaper`, which emits the website's images
+        // from the renderer that draws the real thing rather than from a mockup.
+        .executableTarget(
+            name: "tmu",
+            dependencies: ["TMUKit", "TMUProviders", "TMUDesign", "TMURender"]),
         // The app, minus its @main and its Scenes. Splitting the library out is what makes
         // any of it testable: an executable target cannot be @testable imported cleanly, and
         // everything worth testing here is view-model logic anyway.
@@ -81,7 +85,7 @@ let package = Package(
             dependencies: ["TMUDesktop", "TMURender"]),
         .testTarget(
             name: "TMURenderTests",
-            dependencies: ["TMURender", "TMUProviders"]),
+            dependencies: ["TMURender", "TMUProviders", "TMUTelemetry"]),
         .testTarget(
             name: "TMUClaudeTests",
             dependencies: ["TMUClaude", "TMUKit", "TMUProviders"]),

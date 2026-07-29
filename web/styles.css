@@ -1,148 +1,1132 @@
 /* trackmyusage.dev — no build step, no dependencies, one stylesheet.
    Tokens mirror Sources/TMUDesign/Ink.swift. They are duplicated here rather than generated
-   because eleven hex values are not worth a build pipeline; the app icon and the provider
-   matrix, which genuinely go stale, are generated. */
+   because eleven hex values are not worth a build pipeline; the app icon, the provider
+   matrix and the wallpaper images, which genuinely go stale, are generated. */
 :root {
-    --bg: #0a1014;
-    --panel: rgba(255, 255, 255, 0.04);
-    --border: rgba(255, 255, 255, 0.08);
+    /* Mirrors Ink.swift */
+    --scrim: #0c1216;
+    --window: #1e2429;
+    --popover: #1d2226;
     --ink: #eaf0f2;
     --muted: #8b979e;
     --absent: #5b686f;
     --ok: #4e8f78;
     --warn: #e0a24a;
     --over: #e2564a;
-    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    --action: #3f6df0;
+
+    /* Web-only surfaces */
+    --bg: #070c0f;
+    --bg-soft: #0a1014;
+    --panel: rgba(255, 255, 255, 0.035);
+    --panel-hi: rgba(255, 255, 255, 0.055);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hi: rgba(255, 255, 255, 0.14);
+
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, sans-serif;
+
+    /* Fluid type. One scale, so a heading never needs a per-breakpoint override. */
+    --t-display: clamp(38px, 6.4vw, 76px);
+    --t-h2: clamp(27px, 3.4vw, 40px);
+    --t-h3: clamp(17px, 1.5vw, 19px);
+    --t-lead: clamp(17px, 1.7vw, 21px);
+
+    --gutter: clamp(20px, 4vw, 32px);
+    --section: clamp(72px, 10vw, 132px);
+    --radius: 16px;
+    /* How wide a figure may go when it breaks out of the text column. */
+    --breakout: min(calc(100vw - 2 * var(--gutter)), 1240px);
+
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-* { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    /* The nav is sticky; without this an anchor jump hides its own heading behind it. */
+    scroll-padding-top: 96px;
+    -webkit-text-size-adjust: 100%;
+}
 
 body {
     margin: 0;
     background: var(--bg);
     color: var(--ink);
-    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+    font: 400 16px/1.65 var(--sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-variant-numeric: tabular-nums;
+    overflow-x: hidden;
 }
 
-.wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+/* Ambient light. Two fixed radial washes rather than a gradient on the body, so they stay
+   put while the page scrolls and never band across a long section. */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(900px 620px at 12% -8%, rgba(78, 143, 120, 0.16), transparent 62%),
+        radial-gradient(760px 540px at 88% 4%, rgba(63, 109, 240, 0.11), transparent 60%);
+}
 
-/* Nav */
+/* Everything that is not the wash sits above it. */
+.wrap,
+nav,
+footer {
+    position: relative;
+    z-index: 1;
+}
+
+.wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+}
+
+.narrow {
+    max-width: 760px;
+}
+
+a {
+    color: var(--ink);
+    text-decoration-color: rgba(255, 255, 255, 0.28);
+    text-underline-offset: 3px;
+}
+
+a:hover {
+    text-decoration-color: currentColor;
+}
+
+:focus-visible {
+    outline: 2px solid var(--ok);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+img,
+svg {
+    max-width: 100%;
+}
+
+code {
+    font-family: var(--mono);
+    font-size: 0.92em;
+}
+
+/* ---------------------------------------------------------------- Nav */
+
 nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(7, 12, 15, 0.72);
+    backdrop-filter: saturate(160%) blur(14px);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+nav.scrolled {
+    border-bottom-color: var(--border);
+    background: rgba(7, 12, 15, 0.9);
+}
+
+.nav-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 14px var(--gutter);
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 24px 0;
-    border-bottom: 1px solid var(--border);
 }
-nav img { width: 30px; height: 30px; border-radius: 7px; }
-nav .name { font-weight: 700; letter-spacing: -0.02em; }
-nav .links { margin-left: auto; display: flex; gap: 22px; }
-nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
-nav a:hover { color: var(--ink); }
 
-/* Hero */
-header { padding: 84px 0 64px; }
-h1 {
-    font-size: 46px;
-    line-height: 1.12;
-    letter-spacing: -0.025em;
-    margin: 0 0 20px;
-    max-width: 17ch;
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    text-decoration: none;
+    color: var(--ink);
+    font-weight: 650;
+    letter-spacing: -0.02em;
 }
-.sub { color: var(--muted); font-size: 18px; max-width: 62ch; margin: 0 0 32px; }
 
-.cta { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-.install {
-    font-family: var(--mono);
+.nav-brand img {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+}
+
+.nav-links {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: clamp(14px, 2.2vw, 26px);
+}
+
+.nav-links a {
+    color: var(--muted);
+    text-decoration: none;
     font-size: 14px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    padding: 11px 16px;
-    user-select: all;
+    transition: color 0.18s var(--ease);
 }
+
+.nav-links a:hover {
+    color: var(--ink);
+}
+
+.nav-links .button {
+    padding: 8px 15px;
+    font-size: 13px;
+}
+
+@media (max-width: 720px) {
+    .nav-links .hide-sm {
+        display: none;
+    }
+}
+
+/* ---------------------------------------------------------------- Buttons */
+
 .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background: var(--ok);
-    color: #06110d;
-    font-weight: 600;
+    color: #05100c;
+    font-weight: 650;
     font-size: 14px;
-    border-radius: 9px;
+    border-radius: 10px;
     padding: 12px 20px;
     text-decoration: none;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease),
+        background 0.18s var(--ease);
 }
+
+.button:hover {
+    background: #5aa389;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 26px rgba(78, 143, 120, 0.3);
+}
+
+.button:active {
+    transform: translateY(0);
+}
+
+.button.ghost {
+    background: var(--panel);
+    color: var(--ink);
+    border-color: var(--border-hi);
+}
+
+.button.ghost:hover {
+    background: var(--panel-hi);
+    border-color: rgba(255, 255, 255, 0.24);
+    box-shadow: none;
+}
+
+/* ---------------------------------------------------------------- Hero */
+
+header.hero {
+    padding: clamp(56px, 9vw, 104px) 0 clamp(40px, 6vw, 64px);
+}
+
+.pill-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12.5px;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 14px 6px 10px;
+    margin-bottom: 26px;
+    text-decoration: none;
+}
+
+.pill-tag .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 3px rgba(78, 143, 120, 0.18);
+}
+
+.pill-tag strong {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+h1 {
+    font-size: var(--t-display);
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    font-weight: 660;
+    margin: 0 0 22px;
+    max-width: 16ch;
+    text-wrap: balance;
+}
+
+h1 .grad {
+    background: linear-gradient(101deg, #eaf0f2 6%, #a8d4c1 46%, #74b39a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.lead {
+    color: var(--muted);
+    font-size: var(--t-lead);
+    line-height: 1.55;
+    max-width: 60ch;
+    margin: 0 0 34px;
+    text-wrap: pretty;
+}
+
+.cta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    /* Same reason as `.install .cmd` — this row holds the pill, and an unshrinkable child
+       here would push the whole page wider than the screen. */
+    min-width: 0;
+}
+
+/* Copyable install line. `user-select: all` so one click selects the whole command, plus a
+   button for people who would rather not trust that. */
+.install {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 6px 0 16px;
+    height: 44px;
+    color: var(--ink);
+    max-width: 100%;
+}
+
+/* A clone URL is long. It scrolls inside the pill rather than widening it, so a phone gets
+   a scrollable command instead of a page that scrolls sideways. The Copy button is the
+   reason that is acceptable: nobody has to scroll to select the tail of it.
+
+   `min-width: 0` is the whole trick. A flex item defaults to `min-width: auto`, which
+   refuses to shrink below its content — so without this the nowrap command widened the
+   pill, the pill widened the hero, and every section on the page inherited a width wider
+   than the phone. `body { overflow-x: hidden }` then hid the evidence instead of the
+   cause. */
+.install .cmd {
+    user-select: all;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    min-width: 0;
+}
+
+.install .cmd::-webkit-scrollbar {
+    display: none;
+}
+
+.install .prompt,
+.install .copy {
+    flex: none;
+}
+
+.install .prompt {
+    color: var(--absent);
+    user-select: none;
+}
+
+.copy {
+    font: inherit;
+    font-size: 11.5px;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.18s var(--ease);
+}
+
+.copy:hover {
+    color: var(--ink);
+    border-color: var(--border-hi);
+    background: var(--panel-hi);
+}
+
+.copy.done {
+    color: var(--ok);
+    border-color: rgba(78, 143, 120, 0.5);
+}
+
 .caption {
-    margin-top: 22px;
+    margin-top: 26px;
     color: var(--absent);
     font-size: 13px;
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    align-items: center;
 }
-.caption span::after { content: " ·"; }
-.caption span:last-child::after { content: ""; }
 
-/* Sections */
-section { padding: 56px 0; border-top: 1px solid var(--border); }
-h2 { font-size: 13px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 26px; }
+.caption span::after {
+    content: "·";
+    margin-left: 10px;
+    opacity: 0.5;
+}
 
-.pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.caption span:last-child::after {
+    content: "";
+}
+
+/* ---------------------------------------------------------------- Screen */
+
+/* The wallpaper SVG is a transparent overlay — it composites over whatever background you
+   already have. Showing it on a plain page would be a lie by omission, so it is placed on a
+   surface that behaves like a desktop. */
+.screen {
+    position: relative;
+    border-radius: clamp(10px, 1.4vw, 18px);
+    border: 1px solid var(--border-hi);
+    background:
+        radial-gradient(1200px 800px at 78% 12%, rgba(63, 109, 240, 0.2), transparent 55%),
+        radial-gradient(900px 700px at 14% 88%, rgba(78, 143, 120, 0.18), transparent 58%),
+        linear-gradient(155deg, #16222b 0%, #0d151b 48%, #101a20 100%);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.07) inset,
+        0 30px 80px -20px rgba(0, 0, 0, 0.75);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+}
+
+.screen img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* The menu bar strip, so the panel reads as sitting on a Mac rather than floating. */
+.screen .menubar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4.2%;
+    min-height: 16px;
+    background: rgba(6, 10, 13, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 0 1.4%;
+    font-family: var(--mono);
+    font-size: clamp(7px, 0.86vw, 12px);
+    color: var(--muted);
+    letter-spacing: 0.02em;
+}
+
+.screen .menubar .gauge {
+    color: var(--ink);
+}
+
+.screen .menubar .gauge .hot {
+    color: var(--over);
+}
+
+/* Wider than the text column. The panel is a small thing on a large desktop — that is the
+   product, not a framing choice — so the only lever for legibility is giving the whole
+   desktop more room. Bounded by the viewport so the breakout never causes a sideways
+   scroll, which `body { overflow-x: hidden }` would otherwise hide rather than prevent.
+   Negative margins rather than `margin-left: 50%` + `translateX(-50%)`: the elements this
+   lands on are also `.reveal`, whose finished state sets `transform: none`, and the two
+   would silently cancel each other — which is exactly what they did. */
+.breakout {
+    width: var(--breakout);
+    margin-inline: calc((100% - var(--breakout)) / 2);
+}
+
+/* margin-top alone, never the `margin` shorthand: this element also carries `.breakout`,
+   and a shorthand here resets the inline margins that do the centring. */
+.hero-figure {
+    margin-top: clamp(36px, 6vw, 62px);
+}
+
+.screen-link {
+    display: block;
+    text-decoration: none;
+}
+
+figcaption {
+    margin-top: 14px;
+    color: var(--absent);
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    flex-wrap: wrap;
+}
+
+figcaption b {
+    color: var(--muted);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- Sections */
+
+section {
+    padding: var(--section) 0;
+    border-top: 1px solid var(--border);
+}
+
+.eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ok);
+    margin: 0 0 14px;
+    font-weight: 600;
+}
+
+h2 {
+    font-size: var(--t-h2);
+    line-height: 1.12;
+    letter-spacing: -0.028em;
+    font-weight: 640;
+    margin: 0 0 18px;
+    max-width: 22ch;
+    text-wrap: balance;
+}
+
+.section-lead {
+    color: var(--muted);
+    font-size: 17px;
+    max-width: 62ch;
+    margin: 0 0 clamp(32px, 4vw, 48px);
+    text-wrap: pretty;
+}
+
+/* ---------------------------------------------------------------- Cards */
+
+.grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+}
+
 .card {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px;
+    border-radius: var(--radius);
+    padding: 26px;
+    transition: border-color 0.25s var(--ease), background 0.25s var(--ease),
+        transform 0.25s var(--ease);
 }
-.card h3 { margin: 0 0 8px; font-size: 16px; }
-.card p { margin: 0; color: var(--muted); font-size: 14px; }
 
-/* Provider matrix */
-.counts { color: var(--muted); font-size: 14px; margin: -12px 0 22px; }
-.matrix { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.card:hover {
+    border-color: var(--border-hi);
+    background: var(--panel-hi);
+    transform: translateY(-2px);
+}
+
+.card h3 {
+    margin: 0 0 10px;
+    font-size: var(--t-h3);
+    font-weight: 620;
+    letter-spacing: -0.015em;
+}
+
+.card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.62;
+}
+
+.card p + p {
+    margin-top: 12px;
+}
+
+.card .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(78, 143, 120, 0.12);
+    border: 1px solid rgba(78, 143, 120, 0.24);
+    color: var(--ok);
+    margin-bottom: 18px;
+}
+
+/* ---------------------------------------------------------------- Steps */
+
+.steps {
+    display: grid;
+    gap: 2px;
+    counter-reset: step;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--border);
+}
+
+.step {
+    counter-increment: step;
+    background: var(--bg-soft);
+    padding: 26px clamp(20px, 3vw, 32px);
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+.step::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ok);
+    background: rgba(78, 143, 120, 0.1);
+    border: 1px solid rgba(78, 143, 120, 0.22);
+    border-radius: 9px;
+    width: 44px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.step h3 {
+    margin: 4px 0 8px;
+    font-size: var(--t-h3);
+    font-weight: 620;
+    letter-spacing: -0.015em;
+}
+
+.step p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.62;
+}
+
+@media (max-width: 560px) {
+    .step {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+/* ---------------------------------------------------------------- Table */
+
+.table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    min-width: 620px;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 16px 22px;
+    vertical-align: top;
+}
+
+thead th {
+    font-size: 11.5px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--absent);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+}
+
+tbody tr + tr td {
+    border-top: 1px solid var(--border);
+}
+
+tbody td:first-child {
+    color: var(--ink);
+    width: 42%;
+}
+
+tbody td:last-child {
+    color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- Layout switcher */
+
+.switcher {
+    display: flex;
+    gap: 6px;
+    padding: 5px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.switcher button {
+    font: inherit;
+    font-size: 13.5px;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s var(--ease);
+    white-space: nowrap;
+}
+
+.switcher button:hover {
+    color: var(--ink);
+}
+
+.switcher button[aria-selected="true"] {
+    color: var(--ink);
+    background: var(--panel-hi);
+    border-color: var(--border-hi);
+}
+
+.layout-panel[hidden] {
+    display: none;
+}
+
+.layout-note {
+    margin: 16px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+    max-width: 68ch;
+}
+
+.layout-note b {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- Providers */
+
+.counts {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin: 0 0 24px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.counts .n {
+    color: var(--ink);
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+
+.counts .key {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.matrix {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 8px;
+}
+
 .provider {
     display: flex;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 0 10px;
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 9px;
-    padding: 11px 14px;
+    border-radius: 10px;
+    padding: 12px 14px;
     font-size: 14px;
+    /* Uniform height so a two-line note does not make its whole grid row taller than the
+       rest. The note wraps onto its own line rather than squeezing the name. */
+    min-height: 60px;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
 }
-.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.dot.built { background: var(--ok); }
-.dot.blocked { background: var(--warn); }
-.dot.planned { background: var(--absent); }
-.provider .note { margin-left: auto; color: var(--absent); font-size: 12px; }
-.provider.planned { color: var(--muted); }
 
-/* Pricing */
-.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
-.plan { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 26px; }
-.plan.pro { border-color: rgba(78, 143, 120, 0.4); background: rgba(78, 143, 120, 0.06); }
-.plan .price { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
-.plan .term { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
-.plan ul { list-style: none; padding: 0; margin: 0; font-size: 14px; color: var(--muted); }
-.plan li { padding: 5px 0; }
-.plan li::before { content: "✓ "; color: var(--ok); }
+.provider:hover {
+    border-color: var(--border-hi);
+    background: var(--panel-hi);
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: none;
+}
+
+.dot.built {
+    background: var(--ok);
+    box-shadow: 0 0 0 3px rgba(78, 143, 120, 0.16);
+}
+
+.dot.blocked {
+    background: var(--warn);
+    box-shadow: 0 0 0 3px rgba(224, 162, 74, 0.14);
+}
+
+.dot.planned {
+    background: var(--absent);
+}
+
+/* The identifier verbatim, in mono — it is what you type at `tmu provider add <id>`.
+   Title-casing it would render "openai" as "Openai" and "posthog" as "Posthog", inventing
+   spellings for real products; providers.json carries no display names to use instead. */
+.provider .name {
+    font-family: var(--mono);
+    font-size: 13.5px;
+}
+
+.provider .note {
+    flex-basis: 100%;
+    margin-left: 17px;
+    margin-top: 2px;
+    color: var(--absent);
+    font-size: 11.5px;
+}
+
+.provider.planned .name {
+    color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- Invariants */
+
+.invariants {
+    display: grid;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.invariant {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.9fr) 1.4fr;
+    gap: clamp(16px, 3vw, 40px);
+    padding: 24px clamp(20px, 3vw, 30px);
+    background: var(--panel);
+}
+
+.invariant + .invariant {
+    border-top: 1px solid var(--border);
+}
+
+.invariant h3 {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 620;
+    letter-spacing: -0.01em;
+}
+
+.invariant p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.62;
+}
+
+@media (max-width: 640px) {
+    .invariant {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+
+/* ---------------------------------------------------------------- Code block */
+
+.code {
+    background: #060a0d;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.code-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--absent);
+    font-family: var(--mono);
+}
+
+.code pre {
+    margin: 0;
+    padding: 20px 18px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: var(--ink);
+}
+
+.code .c {
+    color: var(--absent);
+}
+
+.code .p {
+    color: var(--ok);
+    user-select: none;
+}
+
+/* ---------------------------------------------------------------- Menu bar demo */
+
+.gauge-demo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--popover);
+    border: 1px solid var(--border-hi);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--ink);
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.8);
+}
+
+.gauge-demo .mark {
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+}
+
+.gauge-demo .sep {
+    color: var(--absent);
+}
+
+.gauge-demo .hot {
+    color: var(--over);
+}
+
+.gauge-demo .warnv {
+    color: var(--warn);
+}
+
+/* ---------------------------------------------------------------- CTA band */
+
+.band {
+    border: 1px solid var(--border-hi);
+    border-radius: clamp(18px, 2.4vw, 24px);
+    padding: clamp(36px, 6vw, 64px);
+    text-align: center;
+    background:
+        radial-gradient(700px 320px at 50% 0%, rgba(78, 143, 120, 0.16), transparent 70%),
+        var(--panel);
+}
+
+.band h2 {
+    margin: 0 auto 16px;
+    max-width: 20ch;
+}
+
+.band .lead {
+    margin: 0 auto 30px;
+    max-width: 52ch;
+}
+
+.band .cta {
+    justify-content: center;
+}
+
+/* ---------------------------------------------------------------- Footer */
+
+footer {
+    padding: clamp(48px, 6vw, 72px) 0 clamp(56px, 7vw, 88px);
+    color: var(--absent);
+    font-size: 13.5px;
+    border-top: 1px solid var(--border);
+}
+
+.foot-grid {
+    display: flex;
+    gap: 32px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-bottom: 34px;
+}
+
+.foot-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-weight: 620;
+    letter-spacing: -0.02em;
+}
+
+.foot-brand img {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+}
+
+.foot-links {
+    display: flex;
+    gap: 26px;
+    flex-wrap: wrap;
+}
+
+.foot-links a {
+    color: var(--muted);
+    text-decoration: none;
+}
+
+.foot-links a:hover {
+    color: var(--ink);
+}
+
+footer p {
+    max-width: 74ch;
+    line-height: 1.65;
+}
+
+footer a {
+    color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- Pricing */
+
+.plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(288px, 1fr));
+    gap: 18px;
+}
+
+.plan {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 30px;
+}
+
+.plan.pro {
+    border-color: rgba(78, 143, 120, 0.4);
+    background:
+        radial-gradient(500px 260px at 50% 0%, rgba(78, 143, 120, 0.12), transparent 70%),
+        var(--panel);
+}
+
+.plan .price {
+    font-size: 38px;
+    font-weight: 680;
+    letter-spacing: -0.03em;
+}
+
+.plan .term {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.plan ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--muted);
+}
+
+.plan li {
+    padding: 6px 0 6px 24px;
+    position: relative;
+}
+
+.plan li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--ok);
+}
+
 .badge {
     display: inline-block;
     background: var(--ok);
-    color: #06110d;
+    color: #05100c;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    border-radius: 4px;
-    padding: 2px 6px;
+    border-radius: 5px;
+    padding: 3px 7px;
     vertical-align: middle;
-    margin-left: 8px;
+    margin-left: 10px;
 }
 
-footer { padding: 46px 0 70px; color: var(--absent); font-size: 13px; border-top: 1px solid var(--border); }
-footer a { color: var(--muted); }
+/* ---------------------------------------------------------------- Motion */
 
-@media (max-width: 620px) {
-    h1 { font-size: 32px; }
-    header { padding: 52px 0 40px; }
+/* Scroll reveal, gated on `.js` — which is set by an inline script in the head, and only
+   when IntersectionObserver is actually available to take the hidden state back off again.
+   The hiding must never be the default: `.reveal` sits in the markup, so styling it
+   unconditionally would leave every marked section permanently blank wherever the script
+   does not run. That is not hypothetical — it is what a headless capture of this page did
+   before the gate existed. */
+.js .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+
+.js .reveal.in {
+    opacity: 1;
+    transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+
+    .js .reveal {
+        opacity: 1;
+        transform: none;
+    }
 }
