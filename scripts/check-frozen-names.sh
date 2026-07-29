@@ -19,8 +19,13 @@ cd "$(dirname "$0")/.."
 ALLOWED='com\.anthropic\.claudefordesktop\.claudruple\.|/Applications/Claudruple|Application Support/Claudruple|\$SUPPORT/Claudruple|/Caches/Claudruple|com\.claudruple\.usage|Claudruple era|"Claudruple"|Claudruple ->|the Claudruple|called Claudruple'
 
 # Documentation is allowed to discuss the old name in prose; code is not.
+# --untracked, because without it this check cannot see a file that has not been added yet
+# — which is precisely when a new violation is introduced. It passed locally and failed in
+# CI on the commit that added scripts/lib/instance-identity.sh: the gate ran before `git
+# add`, so `git grep` searched a tree the new file was not in. A guard that only inspects
+# what is already committed reports on the previous commit, not the one being written.
 findings=$(
-    git grep -nI -i claudruple -- \
+    git grep --untracked -nI -i claudruple -- \
         Sources Tests Package.swift scripts native examples \
         ':!scripts/check-frozen-names.sh' \
         ':!Sources/TMUKit/Migration' \
