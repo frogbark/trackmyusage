@@ -27,13 +27,8 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="stylesheet" href="styles.css">
 
-<script>
-// Opt into the scroll-reveal styles before first paint, and only when the thing that undoes
-// them exists. Everything marked `.reveal` is plain markup: if this never runs, the sections
-// are simply visible rather than transparent forever. Inline and in the head deliberately —
-// as an external or deferred script this would run after paint and flash the content.
-if ('IntersectionObserver' in window) document.documentElement.classList.add('js');
-</script>
+<script src="boot.js"></script>
+<script src="site.js" defer></script>
 </head>
 <body>
 
@@ -211,7 +206,7 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
         <div class="layout-panel" id="panel-ledger" role="tabpanel" aria-labelledby="tab-ledger">
             <a class="screen-link breakout" href="wallpaper-ledger.svg" title="Open the full-size vector">
                 <div class="screen">
-                <img src="wallpaper-ledger.svg" width="2560" height="1440" loading="lazy"
+                <img src="wallpaper-ledger.svg" width="2560" height="1440"
                      alt="The ledger layout: a left rail naming every provider, with sparklines and a renewals line.">
             </div>
             </a>
@@ -224,7 +219,7 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
         <div class="layout-panel" id="panel-board" role="tabpanel" aria-labelledby="tab-board" hidden>
             <a class="screen-link breakout" href="wallpaper-board.svg" title="Open the full-size vector">
                 <div class="screen">
-                <img src="wallpaper-board.svg" width="2560" height="1440" loading="lazy"
+                <img src="wallpaper-board.svg" width="2560" height="1440"
                      alt="The board layout: tiles across the bottom of a wide desktop.">
             </div>
             </a>
@@ -238,7 +233,7 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
         <div class="layout-panel" id="panel-card-alert" role="tabpanel" aria-labelledby="tab-card-alert" hidden>
             <a class="screen-link breakout" href="wallpaper-card-alert.svg" title="Open the full-size vector">
                 <div class="screen">
-                <img src="wallpaper-card-alert.svg" width="2560" height="1440" loading="lazy"
+                <img src="wallpaper-card-alert.svg" width="2560" height="1440"
                      alt="The card layout in its alert form: a corner card, grown and brightened, leading with the account that is nearly spent.">
             </div>
             </a>
@@ -252,7 +247,7 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
         <div class="layout-panel" id="panel-card-quiet" role="tabpanel" aria-labelledby="tab-card-quiet" hidden>
             <a class="screen-link breakout" href="wallpaper-card-quiet.svg" title="Open the full-size vector">
                 <div class="screen">
-                <img src="wallpaper-card-quiet.svg" width="2560" height="1440" loading="lazy"
+                <img src="wallpaper-card-quiet.svg" width="2560" height="1440"
                      alt="The card layout in its quiet form: a dim corner card showing two accounts and one line confirming the rest was checked.">
             </div>
             </a>
@@ -283,7 +278,7 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
             </span>
         </p>
 
-        <div class="grid reveal" style="margin-top:32px">
+        <div class="grid reveal spaced">
             <div class="card">
                 <h3>Read, not estimated</h3>
                 <p>
@@ -325,7 +320,7 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
         <p class="counts" id="counts">Loading…</p>
         <div class="matrix" id="matrix"></div>
 
-        <p class="section-lead" style="margin:26px 0 0">
+        <p class="section-lead footnote">
             This table is generated from <code>ProviderRegistry</code> and checked in CI, so the
             counts here are structurally unable to overstate what actually ships.
         </p>
@@ -413,7 +408,7 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
 <span class="p">$</span> .build/release/tmud apply    <span class="c"># paint it onto the wallpaper</span></pre>
         </div>
 
-        <p class="layout-note" style="margin-top:20px">
+        <p class="layout-note spaced">
             You will see <code>/Applications/Claudruple</code> and it is not a typo. The project
             was renamed, but that directory, each clone's bundle id and each clone's profile path
             are baked into LaunchServices registrations, code signatures and a compiled-in
@@ -457,7 +452,7 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
             <a href="https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor">Claude Code Usage Monitor</a>
             and <a href="https://github.com/snipeship/ccflare">ccflare</a> walked this ground first.
         </p>
-        <p style="margin-top:14px">
+        <p class="stacked">
             TrackMyUsage never bundles or redistributes Claude Desktop, and each instance still
             requires its own paid Anthropic account. Not affiliated with Anthropic.
             Usage figures shown on this page are demonstration data.
@@ -465,126 +460,6 @@ if ('IntersectionObserver' in window) document.documentElement.classList.add('js
     </div>
 </footer>
 
-<script>
-// The matrix is rendered from providers.json, which is generated from ProviderRegistry and
-// checked in CI. A hand-written table here would go stale the first time an adapter landed,
-// and a page overstating coverage is exactly what this project argues against.
-fetch('providers.json')
-    .then(r => r.json())
-    .then(data => {
-        var order = { built: 0, blocked: 1, planned: 2 };
-
-        // Built with DOM calls rather than innerHTML. The data is generated from
-        // ProviderRegistry and not user input, but an adapter's note is free text written
-        // in Swift, and there is no reason for the one place it reaches a browser to be the
-        // one place a stray angle bracket becomes markup.
-        function el(tag, className, text) {
-            var node = document.createElement(tag);
-            if (className) node.className = className;
-            if (text !== undefined) node.textContent = text;
-            return node;
-        }
-
-        var counts = document.getElementById('counts');
-        counts.textContent = '';
-        ['built', 'blocked', 'planned'].forEach(function (status) {
-            var key = el('span', 'key');
-            key.appendChild(el('span', 'dot ' + status));
-            key.appendChild(el('span', 'n', data[status]));
-            key.appendChild(document.createTextNode(' ' + status));
-            counts.appendChild(key);
-        });
-        var total = el('span', 'key');
-        total.appendChild(document.createTextNode('of '));
-        total.appendChild(el('span', 'n', data.total));
-        total.appendChild(document.createTextNode(' intended'));
-        counts.appendChild(total);
-
-        // Sorted by status so the built ones lead. The JSON's own order is registry order,
-        // which is meaningful in the code and arbitrary on a page.
-        var providers = data.providers.slice().sort(function (a, b) {
-            return (order[a.status] - order[b.status]) || a.id.localeCompare(b.id);
-        });
-
-        var matrix = document.getElementById('matrix');
-        matrix.textContent = '';
-        providers.forEach(function (p) {
-            var row = el('div', 'provider ' + p.status);
-            row.appendChild(el('span', 'dot ' + p.status));
-            row.appendChild(el('span', 'name', p.id));
-            if (p.note) row.appendChild(el('span', 'note', p.note));
-            matrix.appendChild(row);
-        });
-    })
-    .catch(function () {
-        document.getElementById('counts').textContent =
-            'Provider list unavailable — see the repository.';
-    });
-
-// Layout switcher.
-(function () {
-    var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
-    if (!tabs.length) return;
-
-    function select(tab) {
-        tabs.forEach(function (t) {
-            var on = t === tab;
-            t.setAttribute('aria-selected', on ? 'true' : 'false');
-            document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
-        });
-    }
-
-    tabs.forEach(function (tab, i) {
-        tab.addEventListener('click', function () { select(tab); });
-        // Arrow-key movement is what makes a tablist a tablist rather than a row of buttons
-        // wearing the role.
-        tab.addEventListener('keydown', function (e) {
-            var next = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1;
-            if (next < 0) return;
-            e.preventDefault();
-            var target = tabs[(next + tabs.length) % tabs.length];
-            select(target);
-            target.focus();
-        });
-    });
-})();
-
-// Copy button. Falls back to leaving the text selectable, which is why the command is also
-// wrapped in `user-select: all`.
-document.querySelectorAll('.copy').forEach(function (button) {
-    button.addEventListener('click', function () {
-        var text = document.getElementById(button.dataset.copy).textContent;
-        navigator.clipboard.writeText(text).then(function () {
-            button.textContent = 'Copied';
-            button.classList.add('done');
-            setTimeout(function () {
-                button.textContent = 'Copy';
-                button.classList.remove('done');
-            }, 1600);
-        });
-    });
-});
-
-// Nav hairline, and scroll reveal.
-(function () {
-    var nav = document.getElementById('nav');
-    var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 8); };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-
-    // Only opt elements into the animation when it can actually be undone. Applying the
-    // hidden state without an observer to remove it would leave the page blank.
-    if (!('IntersectionObserver' in window)) return;
-    var observer = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-            if (!entry.isIntersecting) return;
-            entry.target.classList.add('in');
-            observer.unobserve(entry.target);
-        });
-    }, { rootMargin: '0px 0px -8% 0px' });
-    document.querySelectorAll('.reveal').forEach(function (el) { observer.observe(el); });
-})();
-</script>
 
 </body>
 </html>

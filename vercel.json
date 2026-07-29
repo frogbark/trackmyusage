@@ -2,10 +2,32 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "web",
   "cleanUrls": true,
+  "trailingSlash": false,
   "headers": [
     {
       "source": "/providers.json",
       "headers": [{ "key": "cache-control", "value": "public, max-age=300" }]
+    },
+    {
+      "source": "/(.*)\\.(svg|png)",
+      "headers": [
+        {
+          "key": "cache-control",
+          "value": "public, max-age=3600, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "x-content-type-options", "value": "nosniff" },
+        { "key": "referrer-policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "x-frame-options", "value": "DENY" },
+        {
+          "key": "content-security-policy",
+          "value": "default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        }
+      ]
     }
   ]
 }
