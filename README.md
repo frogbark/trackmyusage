@@ -238,6 +238,7 @@ settings screen never pulls your keys into memory to draw a list.
 | `sign-clone.sh` | Inside-out re-signing (used by the above) |
 | `build-link.sh` | Build the deep-link broker |
 | `install-link-agent.sh` | Register the broker as a login agent |
+| `uninstall-link-agent.sh` | Stop the broker and hand `claude://` back |
 | `build-app.sh` | Build the menu bar app |
 | `install-wallpaper-agent.sh` | Redraw the wallpaper every five minutes |
 | `uninstall-wallpaper-agent.sh` | Stop, and restore the wallpaper you had first |
