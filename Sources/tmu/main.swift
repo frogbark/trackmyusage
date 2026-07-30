@@ -89,12 +89,27 @@ func cmdInstances() {
         print("  \(inst.name)\(inst.isPrimary ? "  (primary)" : "")")
         print("    bundle   \(inst.bundleID)")
         print("    profile  \(inst.profileURL.path)")
-        // The primary states its version and gets no verdict: it is what the clones are
-        // measured against, so "up to date" would be comparing it with itself.
+        // The version column always holds a version. It briefly held `summary`, which meant
+        // a clone printed "version  up to date" — a label promising one thing and a value
+        // delivering another. The verdict is a separate column because it answers a
+        // different question.
+        //
+        // The primary gets no verdict at all: it is what the clones are measured against, so
+        // any answer would be comparing it with itself.
+        let version = inst.version ?? "unknown"
         if inst.isPrimary {
-            print("    version  \(inst.version ?? "unknown")")
-        } else if let state = freshness[inst.bundleID] {
-            print("    version  \(state.summary)\(state.needsRefresh ? "   ← refresh" : "")")
+            print("    version  \(version)")
+        } else {
+            let verdict: String
+            switch freshness[inst.bundleID] ?? .unknown {
+            case .current:
+                verdict = "up to date"
+            case .stale(_, let installed):
+                verdict = "out of step — installed is \(installed)   ← refresh"
+            case .unknown:
+                verdict = "cannot compare"
+            }
+            print("    version  \(version)   \(verdict)")
         }
         print("    \(count)")
     }

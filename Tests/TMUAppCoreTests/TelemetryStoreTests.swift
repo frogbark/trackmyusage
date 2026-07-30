@@ -21,7 +21,7 @@ final class TelemetryStoreTests: XCTestCase {
         func read(now: Date) -> InstanceReadingResult {
             InstanceReadingResult(
                 snapshots: snapshots, rows: [], advice: nil, activeInstance: nil, alerts: [],
-                staleInstances: stale)
+                outOfStepInstances: stale)
         }
     }
 
@@ -37,7 +37,7 @@ final class TelemetryStoreTests: XCTestCase {
         func read(now: Date) -> InstanceReadingResult {
             InstanceReadingResult(
                 snapshots: [], rows: [], advice: nil, activeInstance: nil, alerts: [],
-                staleInstances: stale)
+                outOfStepInstances: stale)
         }
     }
 
@@ -232,14 +232,14 @@ final class TelemetryStoreTests: XCTestCase {
     func testStaleClonesReachTheStoreSoThePopoverCanSaySo() {
         let store = store(stale: ["Work", "Personal"])
         store.refreshInstances()
-        XCTAssertEqual(store.staleInstances, ["Work", "Personal"])
+        XCTAssertEqual(store.outOfStepInstances, ["Work", "Personal"])
     }
 
     /// Prevents: a permanent banner on an install where every clone is current.
     func testNothingIsReportedWhenEveryCloneMatches() {
         let store = store(stale: [])
         store.refreshInstances()
-        XCTAssertTrue(store.staleInstances.isEmpty)
+        XCTAssertTrue(store.outOfStepInstances.isEmpty)
     }
 
     /// Prevents: the list going stale itself.
@@ -252,11 +252,66 @@ final class TelemetryStoreTests: XCTestCase {
             instanceSource: source, providerSource: StubProviders(),
             cache: temporaryCache(), settings: Settings(), startTimers: false)
         store.refreshInstances()
-        XCTAssertEqual(store.staleInstances, ["Work"])
+        XCTAssertEqual(store.outOfStepInstances, ["Work"])
 
         source.stale = []
         store.refreshInstances()
-        XCTAssertTrue(store.staleInstances.isEmpty)
+        XCTAssertTrue(store.outOfStepInstances.isEmpty)
     }
 
+}
+
+/// The instance card's freshness chip.
+///
+/// Separate from the banner tests above: the banner names out-of-step clones in a sentence,
+/// while each card reports its own comparison, and the two are computed from different
+/// places — `needingRefresh` over every discovered instance, and `InstanceRow.freshness`
+/// over the instances that have usage history. They can disagree, and these pin the row.
+final class InstanceRowFreshnessTests: XCTestCase {
+
+    /// Prevents: the primary being marked out of step against itself.
+    ///
+    /// It is the thing every clone is compared to, and TrackMyUsage never modifies
+    /// /Applications/Claude.app — offering to re-clone it would be offering to overwrite the
+    /// reference with a copy of itself.
+    func testThePrimaryIsCurrentByDefinitionRatherThanByComparison() {
+        let row = row(name: "Claude", isPrimary: true, freshness: .current)
+        XCTAssertFalse(row.freshness.needsRefresh)
+    }
+
+    /// Prevents: a card claiming a direction the model refused to determine.
+    ///
+    /// `summary` is what the chip renders. It states both versions and an arrow, never
+    /// "older" or "behind", because reinstalling an earlier Claude leaves the clone the
+    /// newer of the two and the remedy is identical either way.
+    func testTheChipStatesBothVersionsAndNoDirection() {
+        let row = row(
+            name: "Work", isPrimary: false,
+            freshness: .stale(clone: "0.15.9", installed: "0.16.1"))
+
+        XCTAssertEqual(row.freshness.summary, "0.15.9 → 0.16.1")
+        XCTAssertFalse(row.freshness.summary.lowercased().contains("old"))
+        XCTAssertFalse(row.freshness.summary.lowercased().contains("behind"))
+    }
+
+    /// Prevents: a row built without a version quietly reading as up to date.
+    ///
+    /// The default is `.unknown` rather than `.current` so a caller that forgets to pass a
+    /// version gets a row that says nothing, not one that says everything is fine.
+    func testARowBuiltWithoutAVersionDefaultsToUnknownRatherThanCurrent() {
+        let row = TelemetryStore.InstanceRow(
+            id: "x", name: "Work", bundleID: "x", isPrimary: false, extensionCount: 0,
+            metrics: [])
+
+        XCTAssertEqual(row.freshness, .unknown)
+        XCTAssertFalse(row.freshness.needsRefresh)
+    }
+
+    private func row(name: String, isPrimary: Bool, freshness: InstanceFreshness)
+        -> TelemetryStore.InstanceRow
+    {
+        TelemetryStore.InstanceRow(
+            id: name, name: name, bundleID: "id.\(name)", isPrimary: isPrimary,
+            extensionCount: 0, metrics: [], freshness: freshness)
+    }
 }

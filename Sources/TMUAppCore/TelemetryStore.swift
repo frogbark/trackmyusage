@@ -29,6 +29,27 @@ public final class TelemetryStore: ObservableObject {
         public let isPrimary: Bool
         public let extensionCount: Int
         public let metrics: [(label: String, value: Double, state: UsageState)]
+        /// How this bundle compares to the installed Claude.
+        ///
+        /// Carried per row so the instances window can say which one is out of step, rather
+        /// than only the popover's banner naming them in a sentence. Defaulted so the many
+        /// tests that build rows for their metrics do not each have to state a version.
+        public let freshness: InstanceFreshness
+
+        public init(
+            id: String, name: String, bundleID: String, isPrimary: Bool,
+            extensionCount: Int,
+            metrics: [(label: String, value: Double, state: UsageState)],
+            freshness: InstanceFreshness = .unknown
+        ) {
+            self.id = id
+            self.name = name
+            self.bundleID = bundleID
+            self.isPrimary = isPrimary
+            self.extensionCount = extensionCount
+            self.metrics = metrics
+            self.freshness = freshness
+        }
     }
 
     @Published public private(set) var model: TelemetryModel
@@ -47,7 +68,7 @@ public final class TelemetryStore: ObservableObject {
     /// Surfaced in the popover because the failure mode is silence: a clone several versions
     /// behind launches, signs in and works, and nothing anywhere says otherwise until
     /// something server-side stops accommodating it.
-    @Published public private(set) var staleInstances: [String] = []
+    @Published public private(set) var outOfStepInstances: [String] = []
 
     private let instanceSource: any InstanceReading
     private let providerSource: any ProviderReadingSource
@@ -105,7 +126,7 @@ public final class TelemetryStore: ObservableObject {
         let reading = instanceSource.read(now: Date())
         instanceSnapshots = reading.snapshots
         instances = reading.rows
-        staleInstances = reading.staleInstances
+        outOfStepInstances = reading.outOfStepInstances
         advice = reading.advice
         activeInstance = reading.activeInstance
         rebuild()

@@ -77,7 +77,11 @@ public struct InstancesWindow: View {
                 .toggleStyle(.switch)
                 .controlSize(.mini)
                 .font(.system(size: 11))
-            Button("Refresh") { store.refreshInstances() }
+            // "Reload", not "Refresh". Refreshing an *instance* now means re-cloning its
+            // bundle from the installed Claude, and a button one line below a card offering
+            // `refresh-instance.sh` must not look like the same verb — this one re-reads
+            // what is on disk and changes nothing.
+            Button("Reload") { store.refreshInstances() }
                 .controlSize(.small)
         }
         .padding(.horizontal, 18)
@@ -118,9 +122,37 @@ private struct InstanceCard: View {
                     .foregroundStyle(row.isPrimary ? Color(Ink.warn) : Color(Ink.ok))
                 Text(row.name).font(.system(size: 14, weight: .semibold))
                 if isActive { Capsule2(text: "active") }
+                if row.freshness.needsRefresh { Capsule2(text: "out of step", tint: Ink.warn) }
                 Spacer()
                 Button("Open") { Switcher.activate(bundleID: row.bundleID) }
                     .controlSize(.small)
+            }
+
+            // Only when there is something to act on. A permanent "up to date" line on every
+            // card is a row of text that never changes and so is never read — and the point
+            // of surfacing this at all is that a clone falling behind is currently silent.
+            if row.freshness.needsRefresh {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color(Ink.warn))
+                    // `summary`, not a second copy of the same arrow formatting. One
+                    // definition of how a version comparison reads, used by the chip here
+                    // and asserted by the tests.
+                    Text(row.freshness.summary)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    // The command, not a button — refreshing replaces a signed bundle and
+                    // refuses while the instance is running. Same reasoning as the popover
+                    // banner and the new-instance row: say where it lives rather than offer
+                    // a click that fails half the time.
+                    Text("./scripts/refresh-instance.sh \"\(row.name)\"")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .textSelection(.enabled)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
 
             ForEach(row.metrics, id: \.label) { metric in

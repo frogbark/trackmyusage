@@ -20,7 +20,12 @@ public struct InstanceReadingResult: Sendable {
     /// Computed from every discovered instance rather than from `rows`, which only contains
     /// instances that have usage history to show. A clone nobody has signed into yet is
     /// still a clone that will not update itself.
-    public let staleInstances: [String]
+    ///
+    /// Named "out of step" rather than "stale" because this view already has a `isStale`,
+    /// meaning a *reading* older than thirty minutes. Two unrelated conditions sharing one
+    /// word in one file is how someone eventually wires a bundle version into a freshness
+    /// colour, or reads this list and thinks the numbers are old.
+    public let outOfStepInstances: [String]
 
     public struct Alert: Sendable {
         public let account: String
@@ -32,14 +37,14 @@ public struct InstanceReadingResult: Sendable {
     public init(
         snapshots: [UsageSnapshot], rows: [TelemetryStore.InstanceRow],
         advice: SteeringAdvice?, activeInstance: String?, alerts: [Alert],
-        staleInstances: [String] = []
+        outOfStepInstances: [String] = []
     ) {
         self.snapshots = snapshots
         self.rows = rows
         self.advice = advice
         self.activeInstance = activeInstance
         self.alerts = alerts
-        self.staleInstances = staleInstances
+        self.outOfStepInstances = outOfStepInstances
     }
 }
 
@@ -62,6 +67,8 @@ public struct LocalInstances: InstanceReading {
         var alerts: [InstanceReadingResult.Alert] = []
 
         let discovered = InstanceLocator.discover()
+        // Read once, outside the loop: it is a property of the machine, not of each clone.
+        let installedClaude = discovered.installedClaudeVersion
         for instance in discovered {
             let file = instance.profileURL.appendingPathComponent("plan-usage-history.json")
             guard let history = try? UsageHistory.parse(contentsOf: file),
@@ -97,7 +104,13 @@ public struct LocalInstances: InstanceReading {
                 TelemetryStore.InstanceRow(
                     id: instance.bundleID, name: instance.name, bundleID: instance.bundleID,
                     isPrimary: instance.isPrimary, extensionCount: extensions,
-                    metrics: metrics))
+                    metrics: metrics,
+                    // The primary is the reference every clone is measured against, so it is
+                    // current by definition rather than by comparison.
+                    freshness: instance.isPrimary
+                        ? .current
+                        : InstanceFreshness.compare(
+                            clone: instance.version, installed: installedClaude)))
 
             if let binding = usage.binding(now: now) {
                 alerts.append(
@@ -125,7 +138,7 @@ public struct LocalInstances: InstanceReading {
                     account: $0.account, metric: $0.metric, value: $0.value,
                     recommendation: advice.recommended)
             },
-            staleInstances: discovered.needingRefresh.map(\.name))
+            outOfStepInstances: discovered.needingRefresh.map(\.name))
     }
 
     /// Which account is being worked in.
