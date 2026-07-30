@@ -59,25 +59,36 @@ public protocol ProviderReadingSource: Sendable {
 // MARK: - Local instances
 
 public struct LocalInstances: InstanceReading {
-    public init() {}
+
+    /// How instances are found. Injectable so the reading can be tested against fixtures on
+    /// disk; production uses the real locator.
+    private let discover: @Sendable () -> [DiscoveredInstance]
+
+    public init(
+        discover: @escaping @Sendable () -> [DiscoveredInstance] = {
+            InstanceLocator.discover()
+        }
+    ) {
+        self.discover = discover
+    }
 
     public func read(now: Date) -> InstanceReadingResult {
         var accounts: [AccountUsage] = []
         var rows: [TelemetryStore.InstanceRow] = []
         var alerts: [InstanceReadingResult.Alert] = []
 
-        let discovered = InstanceLocator.discover()
+        let discovered = discover()
         // Read once, outside the loop: it is a property of the machine, not of each clone.
         let installedClaude = discovered.installedClaudeVersion
         for instance in discovered {
             let file = instance.profileURL.appendingPathComponent("plan-usage-history.json")
-            guard let history = try? UsageHistory.parse(contentsOf: file),
-                !history.samples.isEmpty
-            else { continue }
-
-            let usage = AccountUsage(
-                instanceName: instance.name, bundleID: instance.bundleID, history: history)
-            accounts.append(usage)
+            // Missing history stops this instance contributing *usage*. It does not stop it
+            // existing. The loop used to `continue` here, so an instance created an hour ago
+            // and not yet signed into was absent from the window whose subject is instances —
+            // and the out-of-step banner, which counts every discovered clone, could name one
+            // that had no row to look at.
+            let history = (try? UsageHistory.parse(contentsOf: file))
+                .flatMap { $0.samples.isEmpty ? nil : $0 }
 
             // Read the extension count here, once per refresh. It used to be a computed
             // property on the SwiftUI view, which meant a synchronous disk read on every
@@ -87,18 +98,33 @@ public struct LocalInstances: InstanceReading {
                     name: instance.name, profileURL: instance.profileURL))?
                 .extensions.count ?? 0
 
-            // Only windowed metrics: an unwindowed figure has no cap to be a fraction of, so
-            // rendering it as a percentage would invent a limit that does not exist.
-            let metrics =
-                (history.samples.last?.metrics ?? [:])
-                .filter { $0.key.window != nil }
-                .map {
-                    (
-                        label: $0.key.displayName, value: $0.value,
-                        state: UsageState.classify(utilization: $0.value)
-                    )
+            var metrics: [(label: String, value: Double, state: UsageState)] = []
+
+            if let history {
+                let usage = AccountUsage(
+                    instanceName: instance.name, bundleID: instance.bundleID, history: history)
+                accounts.append(usage)
+
+                // Only windowed metrics: an unwindowed figure has no cap to be a fraction of,
+                // so rendering it as a percentage would invent a limit that does not exist.
+                metrics =
+                    (history.samples.last?.metrics ?? [:])
+                    .filter { $0.key.window != nil }
+                    .map {
+                        (
+                            label: $0.key.displayName, value: $0.value,
+                            state: UsageState.classify(utilization: $0.value)
+                        )
+                    }
+                    .sorted { $0.label < $1.label }
+
+                if let binding = usage.binding(now: now) {
+                    alerts.append(
+                        .init(
+                            account: instance.name, metric: binding.metric,
+                            value: binding.value, recommendation: nil))
                 }
-                .sorted { $0.label < $1.label }
+            }
 
             rows.append(
                 TelemetryStore.InstanceRow(
@@ -110,14 +136,8 @@ public struct LocalInstances: InstanceReading {
                     freshness: instance.isPrimary
                         ? .current
                         : InstanceFreshness.compare(
-                            clone: instance.version, installed: installedClaude)))
-
-            if let binding = usage.binding(now: now) {
-                alerts.append(
-                    .init(
-                        account: instance.name, metric: binding.metric, value: binding.value,
-                        recommendation: nil))
-            }
+                            clone: instance.version, installed: installedClaude),
+                    hasReadings: history != nil))
         }
 
         let active = Self.inferActive(accounts, now: now)
