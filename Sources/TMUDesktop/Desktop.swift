@@ -8,11 +8,25 @@ public struct Display: Sendable, Equatable {
     public let name: String
     /// Backing pixels, not points — a wallpaper rendered at point size is soft on Retina.
     public let canvas: WallpaperCanvas
+    /// Backing scale factor: 2 on Retina, 1 otherwise.
+    ///
+    /// Carried rather than discarded because `canvas` alone cannot say how large a display
+    /// is in any sense a person would recognise. A 14-inch laptop is 3024×1964 pixels and a
+    /// 27-inch 5K is 5120×2880; in points they are 1512×982 and 2560×1440, which is the
+    /// difference automatic layout selection turns on. Rendering still uses pixels.
+    public let scale: Double
 
-    public init(id: String, name: String, canvas: WallpaperCanvas) {
+    /// The display in points — how much interface it actually fits.
+    public var points: WallpaperCanvas {
+        guard scale > 0 else { return canvas }
+        return WallpaperCanvas(width: canvas.width / scale, height: canvas.height / scale)
+    }
+
+    public init(id: String, name: String, canvas: WallpaperCanvas, scale: Double = 1) {
         self.id = id
         self.name = name
         self.canvas = canvas
+        self.scale = scale
     }
 }
 

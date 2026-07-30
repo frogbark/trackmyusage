@@ -21,7 +21,8 @@ func usage() {
           tmud render [--layout L]    write the image, leave the desktop alone
           tmud apply  [--layout L]    write the image and set it as the wallpaper
           tmud layout                 which layout each display is set to
-          tmud layout <id> <L>        set one display's layout ("default" clears it)
+          tmud layout <id> <L>        set one display's layout
+                                      ("auto" fits it to the display, "default" clears it)
           tmud layout --default <L>   set the layout for displays with no choice
           tmud --migrate              finish a migration whose steps were deferred
 
@@ -94,6 +95,29 @@ func runBlocking<T: Sendable>(_ work: @escaping @Sendable () async -> T) -> T {
 
 final class Box<T>: @unchecked Sendable { var value: T? }
 
+/// Every layout name, plus the token that asks for one to be chosen.
+///
+/// `Settings.layout` discards anything not in this set, so `auto` has to be in it to reach
+/// the caller that can resolve it.
+let layoutNames = Set(WallpaperLayoutID.allCases.map(\.rawValue) + [LayoutAssignment.automatic])
+
+/// The layout a display gets, resolving `auto` against the display itself.
+func chosenLayout(
+    for display: Display, settings: Settings, known: Set<String>
+) -> WallpaperLayoutID {
+    let stored = settings.layout(for: display.id, known: known)
+    guard stored != LayoutAssignment.automatic else {
+        // designWidth is the canvas normalised to the renderer's 1440-unit design height —
+        // the width the layout will actually be laid out against, which is what decides
+        // whether the board's tiles fit.
+        let designWidth =
+            display.canvas.height > 0
+            ? display.canvas.width / (display.canvas.height / 1440) : display.canvas.width
+        return LayoutFit.layout(points: display.points, designWidth: designWidth)
+    }
+    return WallpaperLayoutID(rawValue: stored) ?? .ledger
+}
+
 struct Rendered {
     let display: Display
     let file: URL
@@ -106,7 +130,7 @@ func renderAll(layout override: WallpaperLayoutID?, into directory: URL) throws 
     // one and the rail on the other, and one global setting cannot serve both. The flag,
     // when given, beats the file — an explicit invocation should do what it says.
     let settings = SettingsStore.load()
-    let known = Set(WallpaperLayoutID.allCases.map(\.rawValue))
+    let known = layoutNames
     let desktop = try DesktopFactory.current()
     let displays = try desktop.displays()
     let snapshots = collect()
@@ -143,10 +167,7 @@ func renderAll(layout override: WallpaperLayoutID?, into directory: URL) throws 
             outputDirectory: directory)
         if let origin { entry.pristine = origin }
 
-        let layout =
-            override
-            ?? WallpaperLayoutID(rawValue: settings.layout(for: display.id, known: known))
-            ?? .ledger
+        let layout = override ?? chosenLayout(for: display, settings: settings, known: known)
 
         let svg = WallpaperSVG.render(
             model, layout: layout, canvas: display.canvas)
@@ -175,7 +196,7 @@ func renderAll(layout override: WallpaperLayoutID?, into directory: URL) throws 
 /// would not tell you. It was shipped and unreachable, which is indistinguishable from
 /// missing.
 func runLayout(_ args: [String]) throws {
-    let known = Set(WallpaperLayoutID.allCases.map(\.rawValue))
+    let known = layoutNames
     var settings = SettingsStore.load()
 
     // No arguments: report, and print the ids, since that is what the next command needs.
@@ -184,13 +205,18 @@ func runLayout(_ args: [String]) throws {
         print("\ndefault: \(settings.defaultLayout)\n")
         for display in try desktop.displays() {
             let assigned = settings.layoutByDisplay[display.id]
+            let resolved = chosenLayout(for: display, settings: settings, known: known)
+            let source =
+                assigned == LayoutAssignment.automatic
+                ? "auto" : (assigned == nil ? "default" : "set")
             print("  \(display.name)")
             print("    id      \(display.id)")
-            print(
-                "    layout  \(settings.layout(for: display.id, known: known))"
-                    + (assigned == nil ? "  (default)" : "  (set)"))
+            print("    size    \(Int(display.points.width))x\(Int(display.points.height)) pt")
+            print("    layout  \(resolved.rawValue)  (\(source))")
         }
-        print("\nset one with:  tmud layout <id> \(known.sorted().joined(separator: "|"))")
+        let names = WallpaperLayoutID.allCases.map(\.rawValue).sorted().joined(separator: "|")
+        print("\nset one with:    tmud layout <id> \(names)")
+        print("or let it pick:  tmud layout <id> auto")
         print("clear one with:  tmud layout <id> default\n")
         return
     }
@@ -209,10 +235,13 @@ func runLayout(_ args: [String]) throws {
             Data("unknown layout '\(name)'. Known: \(names), or 'default' to clear.\n".utf8))
         exit(2)
 
-    case .defaultCannotBeClearing:
+    case .defaultCannotBe(let token):
+        let why =
+            token == LayoutAssignment.automatic
+            ? "it is a rule for one display, not a fallback for the others"
+            : "it is what that falls back to"
         FileHandle.standardError.write(
-            Data(
-                "the default cannot be 'default' — it is what that falls back to\n".utf8))
+            Data("the default cannot be '\(token)' — \(why)\n".utf8))
         exit(2)
 
     case .setDefault(let layout):
@@ -333,7 +362,7 @@ do {
 
         let desktop = try DesktopFactory.current()
         let settings = SettingsStore.load()
-        let known = Set(WallpaperLayoutID.allCases.map(\.rawValue))
+        let known = layoutNames
         print("\ndisplays:")
         for display in try desktop.displays() {
             let current = desktop.currentWallpaper(for: display)
@@ -349,15 +378,19 @@ do {
             // nothing ever printed an id, so the one thing you needed in order to set one
             // was the one thing the tool would not tell you.
             let assigned = settings.layoutByDisplay[display.id]
-            let resolved = settings.layout(for: display.id, known: known)
-            let source = assigned == nil ? "default" : "set"
+            let resolved = chosenLayout(for: display, settings: settings, known: known)
+            // Says what will be drawn, and where that came from. Printing "auto" alone would
+            // name the rule and withhold its answer, which is the one thing being asked.
+            let source =
+                assigned == LayoutAssignment.automatic
+                ? "auto" : (assigned == nil ? "default" : "set")
 
             print(
                 "  \(display.name)  \(Int(display.canvas.width))x"
                     + "\(Int(display.canvas.height))  over "
                     + (origin?.lastPathComponent ?? "a generated background"))
             print("    id      \(display.id)")
-            print("    layout  \(resolved)  (\(source))")
+            print("    layout  \(resolved.rawValue)  (\(source))")
         }
         print()
 

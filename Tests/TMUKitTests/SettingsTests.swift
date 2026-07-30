@@ -25,7 +25,7 @@ final class LayoutAssignmentTests: XCTestCase {
     func testTheDefaultCannotBeTheClearingToken() {
         XCTAssertEqual(
             LayoutAssignment.plan(target: "--default", choice: "default", known: known),
-            .defaultCannotBeClearing)
+            .defaultCannotBe("default"))
     }
 
     /// Prevents: clearing a display and setting it, or either being mistaken for the other.
