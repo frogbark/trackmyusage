@@ -35,12 +35,20 @@ public final class TelemetryStore: ObservableObject {
         /// than only the popover's banner naming them in a sentence. Defaulted so the many
         /// tests that build rows for their metrics do not each have to state a version.
         public let freshness: InstanceFreshness
+        /// Whether this instance has any usage history at all.
+        ///
+        /// Distinct from `metrics.isEmpty`, which is also true for an instance that has
+        /// been used but reports nothing windowed. The two want different words on screen —
+        /// "not signed in yet" against "nothing with a limit to show" — and collapsing them
+        /// would state one as the other. Neither may be drawn as zero.
+        public let hasReadings: Bool
 
         public init(
             id: String, name: String, bundleID: String, isPrimary: Bool,
             extensionCount: Int,
             metrics: [(label: String, value: Double, state: UsageState)],
-            freshness: InstanceFreshness = .unknown
+            freshness: InstanceFreshness = .unknown,
+            hasReadings: Bool = true
         ) {
             self.id = id
             self.name = name
@@ -49,6 +57,7 @@ public final class TelemetryStore: ObservableObject {
             self.extensionCount = extensionCount
             self.metrics = metrics
             self.freshness = freshness
+            self.hasReadings = hasReadings
         }
     }
 

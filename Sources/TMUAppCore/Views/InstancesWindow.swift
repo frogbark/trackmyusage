@@ -155,6 +155,20 @@ private struct InstanceCard: View {
                 }
             }
 
+            // Absence stated, never drawn as zero — the same rule the wallpaper follows.
+            // An instance with no history renders no meters, and without a line saying why
+            // the card is simply a name with a gap under it, which reads as a bug rather
+            // than as a fact about the instance.
+            if row.metrics.isEmpty {
+                Text(
+                    row.hasReadings
+                        ? "No metered limits reported."
+                        : "No readings yet — sign in to this instance to start recording."
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+            }
+
             ForEach(row.metrics, id: \.label) { metric in
                 HStack(spacing: 10) {
                     Text(metric.label)
