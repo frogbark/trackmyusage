@@ -76,6 +76,10 @@ cp -Rp "build/TrackMyUsage Link.app" /Applications/
 > `/Applications` like anything else.
 > See [`Sources/TMUKit/LegacyNames.swift`](Sources/TMUKit/LegacyNames.swift).
 
+Each instance gets a coloured badge on its icon, so several Claudes in the Dock and the app
+switcher are told apart before you click one. The colour is derived from the name, so it is the
+same on every machine and survives a refresh.
+
 Then sign into the new window with your second account. Remove one with:
 
 ```bash
@@ -168,8 +172,30 @@ to a whisper and stops enumerating — two accounts and one line confirming the 
 checked. When something is hot it grows, brightens and leads with the offender. Silence is
 information too.
 
-Set a layout per display in `~/Library/Application Support/TrackMyUsage/settings.json`; a
-laptop beside a large monitor usually wants `card` on one and `ledger` on the other.
+Each display can have its own, since a laptop beside a large monitor wants `card` on one and
+`ledger` on the other:
+
+```bash
+.build/release/tmud layout                     # every display, its id, and what it will get
+.build/release/tmud layout screen-1 card       # set one
+.build/release/tmud layout screen-1 auto       # or let the display decide
+.build/release/tmud layout screen-1 default    # clear it
+```
+
+`auto` judges the display in points rather than pixels, because resolution stopped tracking
+physical size the moment Retina existed — a 14-inch laptop and a 27-inch 5K are near-identical
+by pixel count and 1512×982 against 2560×1440 in points.
+
+`tmud` is one-shot and not resident, so on its own the wallpaper is a snapshot of the moment
+you ran it. The login agent is what keeps it current:
+
+```bash
+./scripts/install-wallpaper-agent.sh      # redraws every five minutes
+./scripts/uninstall-wallpaper-agent.sh    # stops, and puts your original wallpaper back
+```
+
+It records the wallpaper you had before it first drew anything, because macOS keeps no history
+of what the background used to be — that record is the only way back.
 
 The pipeline is snapshots → model → SVG → raster → desktop, and everything up to the raster
 is a pure function — so a layout regression fails in `swift test` rather than appearing on
@@ -193,8 +219,14 @@ other twelve are **absent rather than stubbed** — a parser written from a reme
 shape is indistinguishable from a correct one until it reports the wrong number. `probe`
 captures a real response so each adapter is written against fact.
 
-Credentials live in the login keychain only, `AfterFirstUnlockThisDeviceOnly`, one account
-per provider. Every adapter declares its minimum read-only scope in code.
+Or from the app: **Providers** in the menu bar popover lists every provider grouped by whether
+it is reporting, waiting for a key, or not available yet, and shows the scope to ask for and a
+link to the page that mints one at the moment you paste.
+
+Credentials live in the login keychain only, `AfterFirstUnlockThisDeviceOnly`, never synced to
+iCloud, one account per provider. Every adapter declares its minimum read-only scope in code.
+Nothing reads a stored secret to decide whether one exists — presence is its own query, so a
+settings screen never pulls your keys into memory to draw a list.
 
 ### Scripts
 
@@ -207,6 +239,9 @@ per provider. Every adapter declares its minimum read-only scope in code.
 | `build-link.sh` | Build the deep-link broker |
 | `install-link-agent.sh` | Register the broker as a login agent |
 | `build-app.sh` | Build the menu bar app |
+| `install-wallpaper-agent.sh` | Redraw the wallpaper every five minutes |
+| `uninstall-wallpaper-agent.sh` | Stop, and restore the wallpaper you had first |
+| `probe-codex.sh` | One-off: does a stripped Codex Desktop clone run? Undoes itself |
 | `finish-repair.sh` | One-off: migrate a Parall install into TrackMyUsage |
 | `remove-parall.sh` | One-off: remove Parall after verifying the migration |
 
