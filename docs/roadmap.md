@@ -89,8 +89,15 @@ seconds could stall a render for four minutes; in parallel the slowest one sets 
 A provider is included when it needs no credential or has one stored — fetching an
 unconfigured one would spend a render cycle drawing "unauthorized" on someone's desktop.
 
-**Still open:** per-display density selection. (Running on a schedule shipped as
-`install-wallpaper-agent.sh`, a login agent on a five-minute interval.)
+Per-display layout: `tmud layout <display-id> ledger|board|card`, or `--default` for
+displays with no choice of their own. `tmud status` and `tmud layout` both print the ids.
+The mechanism had shipped long before the affordance — settings keyed layouts by display
+and the daemon honoured them, but nothing wrote the field and nothing printed an id, so
+using it meant hand-editing JSON with a key the tool would not tell you.
+
+**Still open:** choosing that layout automatically from the display's size, rather than
+being told. (Running on a schedule shipped as `install-wallpaper-agent.sh`, a login agent
+on a five-minute interval.)
 
 ---
 

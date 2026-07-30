@@ -20,6 +20,9 @@ func usage() {
           tmud status                 what it would draw, and onto what
           tmud render [--layout L]    write the image, leave the desktop alone
           tmud apply  [--layout L]    write the image and set it as the wallpaper
+          tmud layout                 which layout each display is set to
+          tmud layout <id> <L>        set one display's layout ("auto" clears it)
+          tmud layout --default <L>   set the layout for displays with no choice
           tmud --migrate              finish a migration whose steps were deferred
 
         OPTIONS
@@ -164,6 +167,86 @@ func renderAll(layout override: WallpaperLayoutID?, into directory: URL) throws 
     return results
 }
 
+/// `tmud layout [<display-id>|--default] [<layout>|auto]`
+///
+/// Settings has keyed layouts by display id since it was written, and `renderAll` has
+/// honoured them for just as long. Nothing could set one: no command wrote the field and no
+/// command printed an id, so using the feature meant hand-editing JSON with a key the tool
+/// would not tell you. It was shipped and unreachable, which is indistinguishable from
+/// missing.
+func runLayout(_ args: [String]) throws {
+    let known = Set(WallpaperLayoutID.allCases.map(\.rawValue))
+    var settings = SettingsStore.load()
+
+    // No arguments: report, and print the ids, since that is what the next command needs.
+    guard let first = args.first else {
+        let desktop = try DesktopFactory.current()
+        print("\ndefault: \(settings.defaultLayout)\n")
+        for display in try desktop.displays() {
+            let assigned = settings.layoutByDisplay[display.id]
+            print("  \(display.name)")
+            print("    id      \(display.id)")
+            print(
+                "    layout  \(settings.layout(for: display.id, known: known))"
+                    + (assigned == nil ? "  (default)" : "  (set)"))
+        }
+        print("\nset one with:  tmud layout <id> \(known.sorted().joined(separator: "|"))")
+        print("clear one with:  tmud layout <id> auto\n")
+        return
+    }
+
+    guard args.count == 2 else {
+        FileHandle.standardError.write(
+            Data("usage: tmud layout [<display-id>|--default] [<layout>|auto]\n".utf8))
+        exit(2)
+    }
+
+    // The rules live in TMUKit, where they are tested. This is the I/O around them.
+    switch LayoutAssignment.plan(target: first, choice: args[1], known: known) {
+    case .unknownLayout(let name):
+        let names = known.sorted().joined(separator: ", ")
+        FileHandle.standardError.write(
+            Data("unknown layout '\(name)'. Known: \(names), or 'auto' to clear.\n".utf8))
+        exit(2)
+
+    case .defaultCannotBeAuto:
+        FileHandle.standardError.write(
+            Data("the default cannot be 'auto' — it is what auto falls back to\n".utf8))
+        exit(2)
+
+    case .setDefault(let layout):
+        settings.defaultLayout = layout
+        try SettingsStore.save(settings)
+        print("default layout is now \(layout)")
+
+    case .assign(let id, let layout):
+        let display = try displayNamed(id)
+        settings.layoutByDisplay[id] = layout
+        try SettingsStore.save(settings)
+        print("\(display.name) is now \(layout)")
+
+    case .clear(let id):
+        let display = try displayNamed(id)
+        settings.layoutByDisplay.removeValue(forKey: id)
+        try SettingsStore.save(settings)
+        print("\(display.name) follows the default (\(settings.defaultLayout))")
+    }
+}
+
+/// The display with this id, or exit.
+///
+/// Refusing an id no display has: a typo would otherwise be accepted, stored, and do nothing
+/// visible, leaving the settings file carrying a key nothing ever reads.
+func displayNamed(_ id: String) throws -> Display {
+    guard let display = try DesktopFactory.current().displays().first(where: { $0.id == id })
+    else {
+        FileHandle.standardError.write(
+            Data("no display with id '\(id)'. Run `tmud layout` to list them.\n".utf8))
+        exit(2)
+    }
+    return display
+}
+
 func describe(_ snapshots: [UsageSnapshot]) {
     guard !snapshots.isEmpty else {
         print("  no providers reporting")
@@ -248,6 +331,8 @@ do {
         describe(snapshots)
 
         let desktop = try DesktopFactory.current()
+        let settings = SettingsStore.load()
+        let known = Set(WallpaperLayoutID.allCases.map(\.rawValue))
         print("\ndisplays:")
         for display in try desktop.displays() {
             let current = desktop.currentWallpaper(for: display)
@@ -257,12 +342,26 @@ do {
                     from: outputDirectory().appendingPathComponent("state.json")
                 )[display.id].pristine,
                 outputDirectory: outputDirectory())
+
+            // The layout each display will actually get, and whether that was chosen or
+            // inherited. Settings has keyed layouts by display id since it was written and
+            // nothing ever printed an id, so the one thing you needed in order to set one
+            // was the one thing the tool would not tell you.
+            let assigned = settings.layoutByDisplay[display.id]
+            let resolved = settings.layout(for: display.id, known: known)
+            let source = assigned == nil ? "default" : "set"
+
             print(
                 "  \(display.name)  \(Int(display.canvas.width))x"
                     + "\(Int(display.canvas.height))  over "
                     + (origin?.lastPathComponent ?? "a generated background"))
+            print("    id      \(display.id)")
+            print("    layout  \(resolved)  (\(source))")
         }
         print()
+
+    case "layout":
+        try runLayout(Array(CommandLine.arguments.dropFirst(2)))
 
     case "render":
         for rendered in try renderAll(layout: layout, into: outputDirectory()) {

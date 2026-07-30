@@ -48,6 +48,44 @@ public struct Settings: Codable, Equatable, Sendable {
     }
 }
 
+/// What `tmud layout <target> <choice>` should do, decided before anything is written.
+///
+/// A separate type because the rules are worth testing and `tmud` is an executable target,
+/// where they would not be. The command becomes a switch over the outcome, which is the
+/// same split the rest of the project uses: the executable owns I/O, the library owns the
+/// decision.
+public enum LayoutAssignment {
+
+    public enum Outcome: Equatable, Sendable {
+        case setDefault(String)
+        case assign(display: String, layout: String)
+        case clear(display: String)
+        /// The name is not a layout this build understands.
+        ///
+        /// Rejected rather than stored: an unknown value decodes fine and then loses to the
+        /// default at render time, so the setting would look accepted and change nothing.
+        case unknownLayout(String)
+        /// `auto` means "fall back to the default", so the default cannot be it.
+        case defaultCannotBeAuto
+    }
+
+    /// The token that clears a display's own choice.
+    public static let clearing = "auto"
+
+    public static func plan(target: String, choice: String, known: Set<String>) -> Outcome {
+        guard choice == clearing || known.contains(choice) else {
+            return .unknownLayout(choice)
+        }
+        guard target == "--default" else {
+            return choice == clearing
+                ? .clear(display: target)
+                : .assign(
+                    display: target, layout: choice)
+        }
+        return choice == clearing ? .defaultCannotBeAuto : .setDefault(choice)
+    }
+}
+
 public enum SettingsStore {
 
     public static func url(home: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL {
