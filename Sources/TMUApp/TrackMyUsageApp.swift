@@ -42,16 +42,8 @@ struct TrackMyUsageApp: App {
         // The menu bar is the product's resting state: usage for every account and every
         // metered service visible without opening anything.
         MenuBarExtra {
-            Popover(
-                store: store,
-                onOpenInstances: {
-                    NSApp.activate(ignoringOtherApps: true)
-                    NSApp.windows.first { $0.identifier?.rawValue.contains("main") == true }?
-                        .makeKeyAndOrderFront(nil)
-                },
-                onQuit: { NSApp.terminate(nil) }
-            )
-            .task { Notifier.requestPermission() }
+            PopoverHost(store: store)
+                .task { Notifier.requestPermission() }
         } label: {
             MenuBarLabel(store: store)
         }
@@ -61,6 +53,42 @@ struct TrackMyUsageApp: App {
             InstancesWindow(store: store)
         }
         .defaultSize(width: 640, height: 460)
+
+        // Its own window rather than a Settings scene. Connecting a provider is a task
+        // someone comes here to do once per service, not a preference they adjust — and
+        // ⌘, is where people look for toggles, not for the screen that explains which
+        // scope to ask for.
+        Window("Providers", id: "providers") {
+            ProvidersWindow()
+        }
+        .defaultSize(width: 660, height: 560)
+    }
+}
+
+/// Wraps the popover so it can reach `openWindow`.
+///
+/// A View rather than closures written inline in the Scene: `@Environment` is only readable
+/// from a View, and the instances button previously worked by hunting `NSApp.windows` for an
+/// identifier containing "main" — which finds nothing until the window has been opened once,
+/// and would have matched any future window whose id happened to contain that substring.
+private struct PopoverHost: View {
+
+    @ObservedObject var store: TelemetryStore
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Popover(
+            store: store,
+            onOpenInstances: { open("main") },
+            onOpenProviders: { open("providers") },
+            onQuit: { NSApp.terminate(nil) })
+    }
+
+    /// A menu-bar app has no Dock icon and is not the active application, so a window it
+    /// opens arrives behind whatever the user was doing unless it is asked for explicitly.
+    private func open(_ id: String) {
+        NSApp.activate(ignoringOtherApps: true)
+        openWindow(id: id)
     }
 }
 

@@ -54,8 +54,8 @@ Three rules the engine enforces rather than documents:
 - **Extension settings are not copied.** They hold `api_key` and `allowed_directories`;
   sync moves tooling between accounts, not the authority to use it.
 
-**Still open:** a tinted icon per instance, and
-instance management in the GUI rather than only the CLI.
+**Still open:** a tinted icon per instance, and instance management in the GUI rather
+than only the CLI.
 
 ## Usage and steering ✅
 

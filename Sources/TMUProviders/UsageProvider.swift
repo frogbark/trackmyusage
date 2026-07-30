@@ -51,6 +51,23 @@ public struct ProviderReading: Sendable, Equatable {
 public protocol CredentialStore: Sendable {
     func secret(for provider: String) throws -> String?
     func set(_ secret: String?, for provider: String) throws
+    /// Whether a secret is stored, without reading it.
+    ///
+    /// Its own operation because the answer a settings screen needs is "is this connected",
+    /// and satisfying that by fetching the token copies a live credential into the address
+    /// space of a process that has no use for it — once per provider, every time the list
+    /// redraws. The keychain can answer presence without returning the bytes, so it should.
+    func has(_ provider: String) -> Bool
+}
+
+extension CredentialStore {
+    /// Falls back to a read for stores that cannot answer presence any other way.
+    ///
+    /// Correct for the in-memory store the tests use, where there is no secret to protect.
+    /// `KeychainCredentials` overrides it.
+    public func has(_ provider: String) -> Bool {
+        ((try? secret(for: provider)) ?? nil) != nil
+    }
 }
 
 /// One integration.
