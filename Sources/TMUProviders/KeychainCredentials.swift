@@ -62,6 +62,25 @@ public struct KeychainCredentials: CredentialStore {
         }
     }
 
+    /// Presence, without returning the secret.
+    ///
+    /// `kSecReturnData` is deliberately absent: the query asks the keychain whether an item
+    /// exists and nothing more, so the token is never copied into this process to answer a
+    /// question that is not about its value. The settings screen redraws on every keystroke
+    /// elsewhere in the window, and each redraw would otherwise have been a fetch.
+    ///
+    /// Checks the legacy service too, on the same reasoning as `secret(for:)` — an item left
+    /// behind by an interrupted migration is still a connected provider, and reporting it as
+    /// unconnected would invite someone to paste a token they already have.
+    public func has(_ provider: String) -> Bool {
+        for service in [service] + (fallbackService.map { [$0] } ?? []) {
+            var query = baseQuery(provider, service: service)
+            query[kSecMatchLimit as String] = kSecMatchLimitOne
+            if SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess { return true }
+        }
+        return false
+    }
+
     public func set(_ secret: String?, for provider: String) throws {
         guard let secret, !secret.isEmpty else {
             // Delete from the legacy service too. Removing only the current one would

@@ -11,15 +11,18 @@ public struct Popover: View {
 
     @ObservedObject var store: TelemetryStore
     var onOpenInstances: () -> Void
+    var onOpenProviders: () -> Void
     var onQuit: () -> Void
 
     public init(
         store: TelemetryStore,
         onOpenInstances: @escaping () -> Void,
+        onOpenProviders: @escaping () -> Void,
         onQuit: @escaping () -> Void
     ) {
         self.store = store
         self.onOpenInstances = onOpenInstances
+        self.onOpenProviders = onOpenProviders
         self.onQuit = onQuit
     }
 
@@ -80,7 +83,12 @@ public struct Popover: View {
             Divider()
             HStack(spacing: 14) {
                 Button("Instances…", action: onOpenInstances)
-                Button("Refresh") {
+                Button("Providers…", action: onOpenProviders)
+                // "Reload", for the same reason the instances window's button was renamed:
+                // this re-reads what is already there, while `refresh-instance.sh` — offered
+                // by the banner a few lines above — replaces a signed application bundle.
+                // Two buttons a centimetre apart must not share a verb for those.
+                Button("Reload") {
                     store.refreshInstances()
                     store.refreshProviders()
                 }
