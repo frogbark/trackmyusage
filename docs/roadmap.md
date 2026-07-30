@@ -27,7 +27,7 @@ TrackMyUsage Link.app     deep-link broker
 | Menu bar and instances window | **working** |
 | Rename migration | **working** |
 | Website | **working** |
-| Codex Desktop | assessed, not started |
+| Codex Desktop | investigated, one experiment left |
 | Release | not started |
 
 ---
@@ -162,32 +162,37 @@ minimum read-only scope in code, so the setup flow and the docs cannot drift apa
 
 ---
 
-## Codex Desktop — assessed, not started
+## Codex Desktop — investigated, not started
 
 `/Applications/ChatGPT.app` **is** Codex Desktop (bundle id `com.openai.codex`, version
 26.721.41059).
 
-**Transfers:** it is Electron, claims `codex://`, and calls `setAsDefaultProtocolClient` on
-launch — the same last-launch-wins tug-of-war. The broker already resolves handlers by
-scheme and needs only a second one registered.
+**Transfers:** it claims `codex://` and calls `setAsDefaultProtocolClient` on launch — the
+same last-launch-wins tug-of-war. The broker already resolves handlers by scheme and needs
+only a second one registered. The launcher shim transfers too: `--user-data-dir` is a
+Chromium flag before it is an Electron one.
 
-**Does not:** it is sandboxed. Its entitlements include `app-sandbox`,
-`application-groups`, `keychain-access-groups` and `aps-environment`, all Team-ID-bound and
-unclaimable by a re-signed clone. Claude loses only WebAuthn and hardware-key login that
-way; a Codex clone would additionally lose its app group, its container identity and push.
-Whether it still runs usefully after that is the first thing to establish, and may be what
-stops this. It also ships Sparkle, so clones go stale and self-update may fail signature
-checks.
+**Does not:** it is sandboxed, and its entitlements — `app-sandbox`, `application-groups`,
+`aps-environment`, `keychain-access-groups` — are all Team-ID-bound and unclaimable by a
+re-signed clone. It also ships Sparkle, so clones go stale and self-update fails its
+signature check.
 
-**Open questions, each cheap to answer:**
+**The three open questions are answered.** See [`findings.md`](findings.md) §8.
 
-1. Where does its userData name come from? `CFBundleName` is `ChatGPT`, the framework is
-   `Codex Framework.framework`, the profile lands at `~/Library/Application Support/Codex`
-   — three names that disagree, with no `app.setName("…")` literal found.
-2. Where are its Electron helpers? `Contents/Frameworks` holds only the framework and
-   Sparkle — no `<Name> Helper.app`. Claude aborted at startup when `CFBundleName` moved
-   away from its helpers; whatever Codex does instead decides whether that trap exists here.
-3. Does the sandbox survive ad-hoc re-signing, and does the app start without its app group?
+1. The profile name comes from the Chromium product name compiled into `Codex
+   Framework`, not from `CFBundleName` (`ChatGPT`) and not from any `app.setName` in the
+   asar. It cannot be moved by stamping, and does not need to be — the shim still works.
+2. The helpers live in `Codex Framework.framework/Helpers/`, named after the framework
+   rather than after `CFBundleName`. The trap that pins Claude's `CFBundleName` to
+   `"Claude"` has no equivalent here.
+3. Partly. The exact entitlement list is known, and the session is confirmed to live in the
+   team keychain group (`Codex Auth`, `Codex Safe Storage` — the latter being Chromium's
+   profile encryption key). Whether the app launches at all once `app-sandbox` is stripped
+   is the one thing inspection cannot settle.
+
+**What is left** is a single experiment: strip `app-sandbox`, `application-groups` and
+`aps-environment` in addition to the three `sign-clone.sh` already removes, re-sign ad-hoc,
+and see whether it starts and can hold its own credentials. Everything else is known.
 
 ## Release — not started
 
