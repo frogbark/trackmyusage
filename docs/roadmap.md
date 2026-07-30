@@ -27,7 +27,7 @@ TrackMyUsage Link.app     deep-link broker
 | Menu bar and instances window | **working** |
 | Rename migration | **working** |
 | Website | **working** |
-| Codex Desktop | investigated, one experiment left |
+| Codex Desktop | probed; clone runs, not started |
 | Release | not started |
 
 ---
@@ -205,9 +205,17 @@ signature check.
    profile encryption key). Whether the app launches at all once `app-sandbox` is stripped
    is the one thing inspection cannot settle.
 
-**What is left** is a single experiment: strip `app-sandbox`, `application-groups` and
-`aps-environment` in addition to the three `sign-clone.sh` already removes, re-sign ad-hoc,
-and see whether it starts and can hold its own credentials. Everything else is known.
+**The experiment is done.** `scripts/probe-codex.sh` builds a stripped clone, launches it
+and removes itself. It runs, with a valid ad-hoc signature, and it honours
+`--user-data-dir` — so the launcher shim transfers. See [`findings.md`](findings.md) §8.
+
+**What is left** needs a signed-in account rather than an inspection: whether the clone can
+keep its own `Codex Safe Storage` item across a restart, and whether anything inside the app
+depends on the app group or push at runtime rather than at launch. Twelve seconds at a
+sign-in screen exercises very little.
+
+Sparkle is the standing hazard and it is not hypothetical — Codex updated itself from
+26.721.41059 to 26.721.81911 during the afternoon this was investigated.
 
 ## Release — not started
 

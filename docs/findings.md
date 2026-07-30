@@ -284,16 +284,65 @@ signed out, and Chromium creates a Safe Storage key per profile. Whether it can 
 read its own under an ad-hoc signature, and whether the app starts at all once
 `app-sandbox` is stripped, are the two things inspection cannot settle.
 
-### What is left to find out
+### It runs
 
-One experiment, in this order, and it needs a real clone:
+Measured, not reasoned about. `scripts/probe-codex.sh` clones the app, stamps a distinct
+bundle id, strips `app-sandbox`, `application-groups`, `aps-environment`,
+`keychain-access-groups`, `application-identifier` and `team-identifier`, re-signs ad-hoc,
+launches it, and removes itself afterwards.
 
-1. Strip `app-sandbox`, `application-groups` and `aps-environment` alongside the three
-   already stripped, re-sign ad-hoc, and see whether it launches.
-2. If it launches, whether it can write its own `Codex Safe Storage` item and stay signed
-   in across a restart.
-3. Only then whether the broker can route `codex://` — which is the part already known to
-   transfer, since the scheme is claimed the same last-launch-wins way.
+**A stripped Codex clone starts, with a valid ad-hoc signature.** What survives is the set
+of entitlements that were never Team-ID-bound:
 
-Sparkle is the standing hazard either way: clones go stale and self-update will fail its
-signature check against an ad-hoc signature.
+```
+automation.apple-events   cs.allow-jit   cs.allow-unsigned-executable-memory
+cs.disable-library-validation   device.audio-input   device.camera
+files.user-selected.read-write   network.client   personal-information.calendars
+```
+
+Losing the sandbox and the app group does not stop it launching, which was the open
+question and the one most likely to end this.
+
+**`--user-data-dir` is honoured.** The clone wrote a full profile to the directory it was
+given rather than to `~/Library/Application Support/Codex`. The launcher shim transfers as
+designed — unsurprising once the framework is known to be Chromium, and worth confirming
+rather than assuming, since it is the mechanism the whole approach rests on.
+
+Two things this does **not** establish, both of which need a signed-in account:
+
+1. Whether the clone can create and keep its own `Codex Safe Storage` item under an ad-hoc
+   signature, and so stay signed in across a restart.
+2. Whether anything inside the app depends on the app group or push at runtime rather than
+   at launch. Twelve seconds at a sign-in screen exercises very little.
+
+Sparkle remains the standing hazard, and it is not hypothetical: the version recorded at
+the top of this section was 26.721.41059 when it was written and 26.721.81911 by the time
+the probe ran, a few hours later, on the same machine. Codex updates itself on its own
+schedule, so a clone goes stale on that schedule and its self-update will fail a signature
+check against an ad-hoc signature.
+
+### What the probe found out about our own tooling
+
+`sign-clone.sh` could not sign it at first, and the reason was ours. It resolved every
+framework's version directory as `Versions/A`:
+
+```bash
+v="$fw/Versions/A"
+sign_one "${v:-$fw}" ...          # the fallback can never fire — `v` is never empty
+```
+
+`A` is a convention. Apple's frameworks follow it and so does Claude's Electron Framework;
+Chromium names the directory after the Chromium release, and Codex ships
+`Versions/150.0.7871.128`. The fallback that was supposed to cover the difference was
+unreachable, because a concatenated string is never empty — so the framework was signed at
+a path that did not exist, and the flat-framework case the fallback was written for could
+not have worked either. It resolves `Versions/Current` now.
+
+The first two runs of the probe also produced a result that was not true. Cleanup sent
+SIGTERM, waited two seconds and deleted the bundle regardless; Chromium does not exit that
+quickly, and macOS will happily unlink a running application. That left a live process
+executing from a bundle that no longer existed, which the next run's `pgrep` matched and
+reported as a successful launch — and `open -a` re-activated it instead of starting a new
+one, silently dropping the `--user-data-dir` under test. The probe now refuses to start if
+a previous one is alive, escalates to SIGKILL, confirms the process is gone before
+unlinking anything, and uses `open -n`.
