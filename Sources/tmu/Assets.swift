@@ -25,6 +25,8 @@ enum AssetCommands {
             wallpaper(Array(args.dropFirst()))
         case "social":
             social(Array(args.dropFirst()))
+        case "instance-icon":
+            instanceIcon(Array(args.dropFirst()))
         default:
             usage(exitCode: 2)
         }
@@ -81,6 +83,27 @@ enum AssetCommands {
         }
     }
 
+    /// `tmu assets instance-icon <name> <source.icns> <out.iconset>`
+    ///
+    /// Writes the PNGs; the caller runs `iconutil` over the directory. Splitting it there
+    /// keeps this from shelling out to a tool it would then have to check for.
+    private static func instanceIcon(_ args: [String]) {
+        guard args.count >= 3 else {
+            FileHandle.standardError.write(
+                Data("usage: tmu assets instance-icon <name> <source.icns> <out.iconset>\n".utf8))
+            exit(2)
+        }
+        do {
+            try InstanceIcon.writeIconset(
+                name: args[0],
+                source: URL(fileURLWithPath: args[1]),
+                into: URL(fileURLWithPath: args[2]))
+        } catch {
+            FileHandle.standardError.write(Data("assets instance-icon: \(error)\n".utf8))
+            exit(1)
+        }
+    }
+
     private static func usage(exitCode: Int32) -> Never {
         let names = DemoWallpaper.allCases.map(\.rawValue).joined(separator: "|")
         FileHandle.standardError.write(
@@ -89,6 +112,7 @@ enum AssetCommands {
                 usage: tmu assets mark|mark-plain [size]
                        tmu assets wallpaper \(names) [width] [height]
                        tmu assets social [\(names)] [width] [height]
+                       tmu assets instance-icon <name> <source.icns> <out.iconset>
 
                 """.utf8))
         exit(exitCode)
