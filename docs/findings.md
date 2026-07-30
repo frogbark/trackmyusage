@@ -200,3 +200,100 @@ Account-scoped — **never** propagate:
 Copying a permission grant from one account onto another is a security bug, not a
 convenience. Note that MCP servers no longer live in `claude_desktop_config.json` — that
 file now holds only `coworkUserFilesPath` and `preferences`.
+
+## 8. Codex Desktop is not the same shape as Claude Desktop
+
+Measured against `/Applications/ChatGPT.app`, `com.openai.codex`, version `26.721.41059`.
+All of it is read-only inspection; nothing was cloned or launched.
+
+### It is Electron, but the Chromium underneath is not stock
+
+`Contents/Resources/app.asar` is present, so the packaging is Electron. The profile it
+writes is not: `~/Library/Application Support/Codex` contains `ChromeFeatureState`,
+`Crowd Deny`, `AmountExtractionHeuristicRegexes` and `CaptchaProviders` — Chrome browser
+features, not things an Electron app accumulates. The helper set says the same:
+`app_mode_loader` and `web_app_shortcut_copier` ship with Chromium, not with Electron.
+
+This matters because the Claude playbook assumes Electron's conventions, and two of the
+three traps that shaped it turn out not to apply here.
+
+### Where the profile name comes from — and why the shim still works
+
+Three names disagree, and none of them is the answer:
+
+| | |
+|---|---|
+| `CFBundleName` | `ChatGPT` |
+| Framework | `Codex Framework.framework` |
+| Profile | `~/Library/Application Support/Codex` |
+
+There is no `app.setName("Codex")` in the asar — the only `setName` hits are a date
+library. The string is compiled into `Codex Framework`, as the Chromium product name.
+
+So the profile path cannot be moved by stamping `CFBundleName`, the way it cannot for
+Claude, but for a different reason: it is fixed in signed framework code rather than in
+JavaScript. The launcher shim still transfers unchanged, because `--user-data-dir` is a
+Chromium flag before it is an Electron one, and this is Chromium.
+
+### The `CFBundleName` trap does not apply
+
+Claude aborts at startup when `CFBundleName` moves away from its helpers, because Electron
+looks for them at `Contents/Frameworks/<CFBundleName> Helper.app`. Codex keeps its helpers
+somewhere else entirely:
+
+```
+Contents/Frameworks/Codex Framework.framework/Helpers/
+  Codex (Alerts).app      com.openai.codex.framework.AlertNotificationService
+  Codex (GPU).app         com.openai.codex.helper
+  Codex (Renderer).app    com.openai.codex.helper.renderer
+  Codex (Service).app     com.openai.codex.helper
+```
+
+They are named after the *framework*, which stamping an instance never touches. The
+constraint that forced `CFBundleName` to stay `"Claude"` has no equivalent here.
+
+### What a re-signed clone loses
+
+```
+com.apple.security.app-sandbox
+com.apple.security.application-groups   2DC432GLL2.com.openai.codex.notifications
+                                        2DC432GLL2.com.openai.sky.CUAService
+com.apple.developer.aps-environment     production
+keychain-access-groups                  2DC432GLL2.*
+                                        2DC432GLL2.com.openai.shared
+com.apple.application-identifier        2DC432GLL2.com.openai.codex
+```
+
+Every one is Team-ID-bound and unclaimable by an ad-hoc signature. `sign-clone.sh` already
+strips three of these; a Codex clone would additionally have to lose `app-sandbox`,
+`application-groups` and `aps-environment`, which is a larger amputation than Claude
+survives.
+
+The keychain group is the interesting one. Codex keeps its session there:
+
+```
+"svce"="Codex Auth"            "acct"="session-response.chatgpt.com"
+"svce"="Codex Safe Storage"    "acct"="Codex Key"
+```
+
+`Codex Safe Storage` is Chromium's profile encryption key — the one that decrypts `Cookies`
+and `Login Data`. Losing `keychain-access-groups` means a clone cannot read either item.
+
+For a second-account tool that is not obviously fatal: a fresh instance *should* start
+signed out, and Chromium creates a Safe Storage key per profile. Whether it can create and
+read its own under an ad-hoc signature, and whether the app starts at all once
+`app-sandbox` is stripped, are the two things inspection cannot settle.
+
+### What is left to find out
+
+One experiment, in this order, and it needs a real clone:
+
+1. Strip `app-sandbox`, `application-groups` and `aps-environment` alongside the three
+   already stripped, re-sign ad-hoc, and see whether it launches.
+2. If it launches, whether it can write its own `Codex Safe Storage` item and stay signed
+   in across a restart.
+3. Only then whether the broker can route `codex://` — which is the part already known to
+   transfer, since the scheme is claimed the same last-launch-wins way.
+
+Sparkle is the standing hazard either way: clones go stale and self-update will fail its
+signature check against an ad-hoc signature.
