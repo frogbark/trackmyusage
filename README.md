@@ -243,6 +243,7 @@ settings screen never pulls your keys into memory to draw a list.
 | `remove-instance.sh` | Remove an instance; keeps the profile unless `--purge-data` |
 | `refresh-instance.sh` | Re-clone an instance from the current Claude, keeping its identity and profile |
 | `sign-clone.sh` | Inside-out re-signing (used by the above) |
+| `test-scripts.sh` | Tests the identity derivation; runs in CI |
 | `build-link.sh` | Build the deep-link broker |
 | `install-link-agent.sh` | Register the broker as a login agent |
 | `uninstall-link-agent.sh` | Stop the broker and hand `claude://` back |
