@@ -78,6 +78,13 @@ jobs:
           echo "::notice::swift format $(swift format --version)"
           swift format lint --strict --recursive Sources Tests
 
+      # The identity derivation, which decides the bundle id a clone is signed with and the
+      # profile path compiled into its launcher. Getting either wrong produces no error at
+      # any layer — just an instance that boots a fresh, signed-out profile — so it is the
+      # one piece of shell worth running on every push.
+      - name: Script tests
+        run: ./scripts/test-scripts.sh
+
       # Every surviving "claudruple" must be one of the frozen names. A new one is either a
       # missed rename or a frozen name used without going through LegacyNames.
       - name: Frozen names
