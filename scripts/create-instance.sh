@@ -42,6 +42,8 @@ LSREG="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServic
 # it exactly on a bundle that already exists. See scripts/lib/instance-identity.sh.
 # shellcheck source=lib/instance-identity.sh
 source "$ROOT/scripts/lib/instance-identity.sh"
+# shellcheck source=lib/instance-icon.sh
+source "$ROOT/scripts/lib/instance-icon.sh"
 instance_identity "$NAME"
 APP="$INSTANCE_APP"
 BUNDLE_ID="$INSTANCE_BUNDLE_ID"
@@ -83,6 +85,11 @@ clang -arch arm64 -O2 -Wall -Wextra \
   -DREAL_BINARY="\"$REALBIN\"" -DUSER_DATA_DIR="\"$UDD\"" \
   -o "$APP/Contents/MacOS/$NAME" "$ROOT/native/launcher/launcher.c"
 ok "data dir: $UDD"
+
+say "Badging the icon"
+# Before signing, not after: the icns lives inside the bundle, so replacing it later would
+# invalidate the signature that was just verified.
+instance_apply_icon "$APP" "$NAME" "$ROOT"
 
 say "Signing"
 DST="$APP" SRC="$SRC" IDENTITY="$IDENTITY" "$ROOT/scripts/sign-clone.sh" 2>&1 \

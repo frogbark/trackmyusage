@@ -85,7 +85,7 @@ let package = Package(
             dependencies: ["TMUDesktop", "TMURender"]),
         .testTarget(
             name: "TMURenderTests",
-            dependencies: ["TMURender", "TMUProviders", "TMUTelemetry"]),
+            dependencies: ["TMURender", "TMUProviders", "TMUTelemetry", "TMUDesign"]),
         .testTarget(
             name: "TMUClaudeTests",
             dependencies: ["TMUClaude", "TMUKit", "TMUProviders"]),

@@ -41,6 +41,8 @@ LSREG="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServic
 
 # shellcheck source=lib/instance-identity.sh
 source "$ROOT/scripts/lib/instance-identity.sh"
+# shellcheck source=lib/instance-icon.sh
+source "$ROOT/scripts/lib/instance-icon.sh"
 
 say()  { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 ok()   { printf '    \033[32m✓\033[0m %s\n' "$1"; }
@@ -144,6 +146,11 @@ refresh_one() {
         -DREAL_BINARY="\"$EXISTING_REALBIN\"" -DUSER_DATA_DIR="\"$EXISTING_PROFILE\"" \
         -o "$staged/Contents/MacOS/$EXISTING_EXEC" "$ROOT/native/launcher/launcher.c"
     ok "shim -> $EXISTING_PROFILE"
+
+    # Re-badged every time, because the staged bundle is a fresh clone of Claude and so
+    # carries Claude's icon again. Without this, refreshing an instance would silently take
+    # its colour away — and the first symptom would be two identical icons in the Dock.
+    instance_apply_icon "$staged" "$EXISTING_DISPLAY" "$ROOT"
 
     DST="$staged" SRC="$SRC" IDENTITY="$IDENTITY" "$ROOT/scripts/sign-clone.sh" 2>&1 \
         | grep -E 'RESULT|FAILED' | sed 's/^ */    /'
