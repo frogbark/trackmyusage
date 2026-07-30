@@ -39,10 +39,17 @@ public enum Format {
         }
     }
 
-    /// `HH:mm`, in the machine's own timezone.
-    public static func time(_ date: Date) -> String {
+    /// `HH:mm`, in the zone it is given.
+    ///
+    /// The zone is a parameter rather than `TimeZone.current` read here. Reading it made the
+    /// renderer a function of its inputs *and* the machine: the same instant drew 20:33 on a
+    /// laptop and 03:33 on a UTC runner, which is how the committed wallpaper images came to
+    /// disagree with the ones CI regenerated. `generate-web.sh` pinned `TZ=UTC` to paper over
+    /// it, and an environment variable in a shell script is a strange place to keep a
+    /// property the project states as an invariant.
+    public static func time(_ date: Date, in zone: TimeZone) -> String {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
+        calendar.timeZone = zone
         let parts = calendar.dateComponents([.hour, .minute], from: date)
         return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
     }

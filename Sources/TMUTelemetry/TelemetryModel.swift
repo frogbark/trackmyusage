@@ -20,6 +20,13 @@ public struct TelemetryModel: Codable, Equatable, Sendable {
     public let renewals: [Renewal]
     public let attention: Attention
     public let generatedAt: Date
+    /// The zone `generatedAt` is drawn in.
+    ///
+    /// Part of the model because the clock on the wallpaper is content, and content belongs
+    /// to the thing every surface renders rather than to whichever process happens to draw
+    /// it. Carrying it here is what lets the demo renders be reproducible by construction
+    /// instead of by exporting TZ before running the generator.
+    public let timeZone: TimeZone
 
     /// A Claude Desktop or Claude Code account.
     public struct AccountRow: Codable, Equatable, Sendable {
@@ -85,7 +92,8 @@ public struct TelemetryModel: Codable, Equatable, Sendable {
     public static func build(
         snapshots: [UsageSnapshot],
         history: [String: [Double]] = [:],
-        now: Date
+        now: Date,
+        timeZone: TimeZone = .current
     ) -> TelemetryModel {
         var accounts: [AccountRow] = []
         var services: [ServiceRow] = []
@@ -122,7 +130,8 @@ public struct TelemetryModel: Codable, Equatable, Sendable {
             services: services,
             renewals: renewals(from: snapshots, now: now),
             attention: attention(accounts: accounts, services: services),
-            generatedAt: now)
+            generatedAt: now,
+            timeZone: timeZone)
     }
 
     /// Quiet unless something is actually near its limit.

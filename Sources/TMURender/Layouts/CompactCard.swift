@@ -46,7 +46,7 @@ enum CompactCard {
         out += SVG.panel(width: width, height: height, radius: radius, opacity: 0.35)
         out += SVG.wordmark(x: pad, y: pad, size: 15)
         out += SVG.label(
-            Format.time(model.generatedAt), x: width - pad, y: pad, size: 15,
+            Format.time(model.generatedAt, in: model.timeZone), x: width - pad, y: pad, size: 15,
             ink: Ink.muted.value, anchor: "end")
 
         var cursor = 56.0 + pad / 2
@@ -103,7 +103,7 @@ enum CompactCard {
         out += SVG.panel(width: width, height: height, radius: radius, opacity: 0.78)
         out += SVG.wordmark(x: pad, y: pad)
         out += SVG.label(
-            Format.time(model.generatedAt), x: width - pad, y: pad, size: 19,
+            Format.time(model.generatedAt, in: model.timeZone), x: width - pad, y: pad, size: 19,
             ink: Ink.muted.value, anchor: "end")
 
         var cursor = 56.0 + pad / 2

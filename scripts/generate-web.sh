@@ -14,18 +14,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# UTC, because these are committed artifacts and the panel draws a clock.
-#
-# The demo render is dated to a frozen instant, which makes it reproducible on one machine
-# but not across two: Format.time reads `TimeZone.current`, so the same instant renders
-# 20:33 in California and 03:33 on a UTC runner. The generated files were committed from a
-# laptop and CI regenerated them with TZ=UTC, disagreed, and failed — correctly.
-#
-# Pinning it here fixes the artifact rather than the renderer. Reading the ambient timezone
-# is right for a real wallpaper, where the clock is meant to be yours, and is a genuine leak
-# in "rendering is a pure function of its inputs" that would take a timezone threaded
-# through TelemetryModel and all four layouts to close properly.
-export TZ=UTC
+# No TZ pin here any more. It used to need one: Format.time read TimeZone.current, so the
+# same frozen instant drew 20:33 on a laptop and 03:33 on a UTC runner and the committed
+# images disagreed with the ones CI produced. The zone is an input to the renderer now, and
+# DemoSnapshots states its own — so these are reproducible wherever they are generated,
+# which is what "rendering is a pure function of its inputs" was always supposed to mean.
 
 swift build -c release --product tmu >/dev/null
 .build/release/tmu provider --json > web/providers.json
