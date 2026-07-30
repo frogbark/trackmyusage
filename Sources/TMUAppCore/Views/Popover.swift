@@ -32,8 +32,8 @@ public struct Popover: View {
                 MigrationBanner(text: notice) { store.dismissMigrationNotice() }
             }
 
-            if !store.staleInstances.isEmpty {
-                StaleInstancesBanner(names: store.staleInstances)
+            if !store.outOfStepInstances.isEmpty {
+                OutOfStepInstancesBanner(names: store.outOfStepInstances)
             }
 
             if store.model.claude.isEmpty && store.model.services.isEmpty {
@@ -192,13 +192,21 @@ struct Meter: View {
 
 struct Capsule2: View {
     let text: String
+    /// Optional, and nil means the neutral chip this started as — so "active", which is a
+    /// statement of fact rather than a condition, keeps looking like one and only the
+    /// chips that want attention take a colour from the palette.
+    var tint: Hex?
+
     var body: some View {
         Text(text)
             .font(.system(size: 10))
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
-            .background(Capsule().fill(.primary.opacity(0.10)))
-            .foregroundStyle(.secondary)
+            .background(
+                Capsule().fill(
+                    tint.map { Color($0).opacity(0.18) } ?? Color.primary.opacity(0.10))
+            )
+            .foregroundStyle(tint.map { Color($0) } ?? Color.secondary)
     }
 }
 
@@ -230,14 +238,20 @@ struct SteeringBanner: View {
 /// Not dismissible, unlike the migration notice. That one reports something that already
 /// finished; this reports a condition that is still true, and a dismiss button on it would
 /// only offer to stop mentioning it — which is the state the app was already in.
-struct StaleInstancesBanner: View {
+struct OutOfStepInstancesBanner: View {
     let names: [String]
 
+    /// Says "no longer matches" rather than "is older", deliberately.
+    ///
+    /// `InstanceFreshness` refuses to claim a direction — reinstalling an earlier Claude
+    /// leaves the clone the newer of the two, and calling that "older" is simply wrong while
+    /// the remedy is identical either way. The banner is not entitled to assert something
+    /// the model declined to determine.
     private var text: String {
         let list = names.joined(separator: ", ")
         return names.count == 1
-            ? "\(list) is on an older Claude build. Clones do not update themselves."
-            : "\(list) are on older Claude builds. Clones do not update themselves."
+            ? "\(list) no longer matches the installed Claude. Clones do not update themselves."
+            : "\(list) no longer match the installed Claude. Clones do not update themselves."
     }
 
     var body: some View {
