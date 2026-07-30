@@ -192,7 +192,12 @@ final class TelemetryModelTests: XCTestCase {
                 unavailable("sentry"),
             ],
             history: ["github": [10, 20, 30]],
-            now: now)
+            now: now,
+            // Explicit, because the model carries its zone and the golden encodes it. Left
+            // to default to `.current` this file would pass on the machine that recorded it
+            // and fail everywhere else — which is precisely the bug that putting the zone in
+            // the model was meant to end, reappearing in the test for it.
+            timeZone: try XCTUnwrap(TimeZone(identifier: "UTC")))
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -250,7 +255,10 @@ final class TelemetryModelTests: XCTestCase {
               ],
               "state" : "uncapped"
             }
-          ]
+          ],
+          "timeZone" : {
+            "identifier" : "GMT"
+          }
         }
         """
 }

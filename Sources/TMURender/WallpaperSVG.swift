@@ -80,10 +80,11 @@ public enum WallpaperSVG {
         layout: WallpaperLayoutID,
         canvas: WallpaperCanvas,
         generatedAt: Date,
-        history: [String: [Double]] = [:]
+        history: [String: [Double]] = [:],
+        timeZone: TimeZone = .current
     ) -> String {
         let model = TelemetryModel.build(
-            snapshots: snapshots, history: history, now: generatedAt)
+            snapshots: snapshots, history: history, now: generatedAt, timeZone: timeZone)
         return render(model, layout: layout, canvas: canvas)
     }
 

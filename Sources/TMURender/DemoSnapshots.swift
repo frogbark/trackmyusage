@@ -24,6 +24,13 @@ public enum DemoSnapshots {
     /// which is the only reason the staleness check means anything.
     public static let generatedAt = Date(timeIntervalSince1970: 1_784_000_000)
 
+    /// The zone the frozen instant is drawn in.
+    ///
+    /// Without this the instant alone is not enough — `Format.time` used to read the
+    /// machine's zone, so the same demo drew 20:33 in California and 03:33 on a UTC runner
+    /// and `check-generated.sh` failed for a reason no commit could fix.
+    public static let timeZone = TimeZone(identifier: "UTC") ?? .gmt
+
     // MARK: - Sets
 
     /// Two accounts and seventeen services, with something wrong in most of the ways it can be.
@@ -170,9 +177,15 @@ public enum DemoWallpaper: String, CaseIterable, Sendable {
     }
 
     /// Render this case at the given canvas, dated to the frozen demo instant.
+    ///
+    /// UTC, stated here rather than exported before running the generator. A frozen instant
+    /// is only half of reproducibility: the panel draws a clock, so the zone it is read in
+    /// is an input too, and leaving that to the machine is what made the committed images
+    /// disagree with the ones CI produced.
     public func svg(canvas: WallpaperCanvas = .default) -> String {
         WallpaperSVG.render(
             snapshots, layout: layout, canvas: canvas,
-            generatedAt: DemoSnapshots.generatedAt, history: DemoSnapshots.history())
+            generatedAt: DemoSnapshots.generatedAt, history: DemoSnapshots.history(),
+            timeZone: DemoSnapshots.timeZone)
     }
 }

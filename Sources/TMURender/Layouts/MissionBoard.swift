@@ -44,7 +44,7 @@ enum MissionBoard: Sendable {
         var out = SVG.group(x: x, y: designHeight - height - bottomMargin)
         out += SVG.wordmark(x: 0, y: 14)
         out += SVG.label(
-            Format.time(model.generatedAt), x: width, y: 14, size: 19,
+            Format.time(model.generatedAt, in: model.timeZone), x: width, y: 14, size: 19,
             ink: Ink.muted.value, anchor: "end")
 
         for (index, account) in model.claude.enumerated() {

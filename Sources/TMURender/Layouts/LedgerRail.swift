@@ -33,7 +33,8 @@ enum LedgerRail {
         out += SVG.panel(width: width, height: height, radius: radius, opacity: 0.72)
         out += SVG.wordmark(x: pad, y: pad + 14)
         out += SVG.label(
-            Format.time(model.generatedAt), x: width - pad, y: pad + 14, size: 19,
+            Format.time(model.generatedAt, in: model.timeZone), x: width - pad, y: pad + 14,
+            size: 19,
             ink: Ink.muted.value, anchor: "end")
 
         var cursor = headerHeight + pad
