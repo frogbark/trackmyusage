@@ -10,7 +10,11 @@ IDENTITY="${IDENTITY:--}"          # '-' = ad-hoc
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-STRIP_KEYS='com.apple.application-identifier com.apple.developer.team-identifier keychain-access-groups'
+# Overridable, because Claude and Codex need different amputations. Claude survives losing
+# these three; Codex additionally carries app-sandbox, application-groups and
+# aps-environment, all Team-ID-bound and unclaimable by an ad-hoc signature. Rather than a
+# second copy of this script with a longer list, the list is an input.
+STRIP_KEYS="${STRIP_KEYS:-com.apple.application-identifier com.apple.developer.team-identifier keychain-access-groups}"
 
 fail=0
 note() { printf '  %-58s %s\n' "$1" "$2"; }
@@ -95,10 +99,25 @@ for f in "$DST/Contents/MacOS/"*; do
 done
 
 echo "=== 5. frameworks (versioned bundle roots) ==="
+# A versioned framework is signed at its version directory, not at the symlinked top
+# level. Which directory that is has to be resolved, not assumed: "A" is a convention and
+# Apple's own frameworks follow it, but Chromium-derived ones name it after the Chromium
+# release — Codex Desktop ships Versions/150.0.7871.128. This previously read
+#
+#     v="$fw/Versions/A"; sign_one "${v:-$fw}" ...
+#
+# where the fallback was unreachable, because `v` is a concatenated string and so never
+# empty. Anything without a Versions/A was signed at a path that did not exist and failed,
+# and the flat-framework case the fallback was written for could not happen.
 for fw in "$DST/Contents/Frameworks/"*.framework; do
   [ -d "$fw" ] || continue
-  v="$fw/Versions/A"
-  sign_one "${v:-$fw}" "" "$(basename "$fw")"
+  target="$fw"
+  if [ -d "$fw/Versions/Current" ]; then
+    target="$fw/Versions/Current"
+  elif [ -d "$fw/Versions/A" ]; then
+    target="$fw/Versions/A"
+  fi
+  sign_one "$target" "" "$(basename "$fw")"
 done
 
 echo "=== 6. outer bundle ==="
