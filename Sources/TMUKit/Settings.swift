@@ -65,12 +65,17 @@ public enum LayoutAssignment {
         /// Rejected rather than stored: an unknown value decodes fine and then loses to the
         /// default at render time, so the setting would look accepted and change nothing.
         case unknownLayout(String)
-        /// `auto` means "fall back to the default", so the default cannot be it.
-        case defaultCannotBeAuto
+        /// The clearing token means "fall back to the default", so the default cannot be it.
+        case defaultCannotBeClearing
     }
 
     /// The token that clears a display's own choice.
-    public static let clearing = "auto"
+    ///
+    /// "default", not "auto". It means "follow the default", which is what `default` says
+    /// and what `auto` only implies — and `auto` is the obvious name for choosing a layout
+    /// from the display's own size, which is the next thing this wants to grow. Spending it
+    /// on the fallback would have meant taking it back later.
+    public static let clearing = "default"
 
     public static func plan(target: String, choice: String, known: Set<String>) -> Outcome {
         guard choice == clearing || known.contains(choice) else {
@@ -82,7 +87,7 @@ public enum LayoutAssignment {
                 : .assign(
                     display: target, layout: choice)
         }
-        return choice == clearing ? .defaultCannotBeAuto : .setDefault(choice)
+        return choice == clearing ? .defaultCannotBeClearing : .setDefault(choice)
     }
 }
 
