@@ -21,17 +21,17 @@ final class LayoutAssignmentTests: XCTestCase {
             .unknownLayout("hologram"))
     }
 
-    /// Prevents: a default of "auto", which would fall back to itself.
+    /// Prevents: a default of "default", which would fall back to itself.
     func testTheDefaultCannotBeTheClearingToken() {
         XCTAssertEqual(
-            LayoutAssignment.plan(target: "--default", choice: "auto", known: known),
-            .defaultCannotBeAuto)
+            LayoutAssignment.plan(target: "--default", choice: "default", known: known),
+            .defaultCannotBeClearing)
     }
 
     /// Prevents: clearing a display and setting it, or either being mistaken for the other.
-    func testAutoClearsADisplayWhileANameAssignsIt() {
+    func testTheClearingTokenClearsADisplayWhileANameAssignsIt() {
         XCTAssertEqual(
-            LayoutAssignment.plan(target: "screen-1", choice: "auto", known: known),
+            LayoutAssignment.plan(target: "screen-1", choice: "default", known: known),
             .clear(display: "screen-1"))
         XCTAssertEqual(
             LayoutAssignment.plan(target: "screen-1", choice: "card", known: known),
@@ -68,7 +68,7 @@ final class LayoutAssignmentTests: XCTestCase {
 
         guard
             case .clear(let cleared) =
-                LayoutAssignment.plan(target: "screen-1", choice: "auto", known: known)
+                LayoutAssignment.plan(target: "screen-1", choice: "default", known: known)
         else { return XCTFail("expected a clear") }
         settings.layoutByDisplay.removeValue(forKey: cleared)
         XCTAssertEqual(settings.layout(for: "screen-1", known: known), "ledger")

@@ -21,7 +21,7 @@ func usage() {
           tmud render [--layout L]    write the image, leave the desktop alone
           tmud apply  [--layout L]    write the image and set it as the wallpaper
           tmud layout                 which layout each display is set to
-          tmud layout <id> <L>        set one display's layout ("auto" clears it)
+          tmud layout <id> <L>        set one display's layout ("default" clears it)
           tmud layout --default <L>   set the layout for displays with no choice
           tmud --migrate              finish a migration whose steps were deferred
 
@@ -191,7 +191,7 @@ func runLayout(_ args: [String]) throws {
                     + (assigned == nil ? "  (default)" : "  (set)"))
         }
         print("\nset one with:  tmud layout <id> \(known.sorted().joined(separator: "|"))")
-        print("clear one with:  tmud layout <id> auto\n")
+        print("clear one with:  tmud layout <id> default\n")
         return
     }
 
@@ -206,12 +206,13 @@ func runLayout(_ args: [String]) throws {
     case .unknownLayout(let name):
         let names = known.sorted().joined(separator: ", ")
         FileHandle.standardError.write(
-            Data("unknown layout '\(name)'. Known: \(names), or 'auto' to clear.\n".utf8))
+            Data("unknown layout '\(name)'. Known: \(names), or 'default' to clear.\n".utf8))
         exit(2)
 
-    case .defaultCannotBeAuto:
+    case .defaultCannotBeClearing:
         FileHandle.standardError.write(
-            Data("the default cannot be 'auto' — it is what auto falls back to\n".utf8))
+            Data(
+                "the default cannot be 'default' — it is what that falls back to\n".utf8))
         exit(2)
 
     case .setDefault(let layout):
