@@ -91,12 +91,19 @@ Then sign into the new window with your second account. Remove one with:
 
 ```bash
 swift build -c release
+.build/release/tmu doctor                       # is this install actually healthy
 .build/release/tmu instances                    # what is installed
 .build/release/tmu capture "Claude" > trackmyusage.yaml
 .build/release/tmu plan trackmyusage.yaml         # read-only: shows what would change
 .build/release/tmu apply trackmyusage.yaml        # install what is missing
 .build/release/tmu apply trackmyusage.yaml --prune # also remove unmanaged extensions
 ```
+
+`doctor` checks the things that break quietly: whether each clone is registered with
+LaunchServices under the id it is signed with, whether the profile path compiled into its
+launcher is the one the CLI reads, whether the broker is running and owns `claude://`, and
+whether the agents are loaded. It exits non-zero when something is broken, so it can gate a
+script. Warnings are choices and do not fail it.
 
 Payloads are copied from an instance that already has them (`--from` to choose). On APFS
 this is a clonefile copy: 15 extensions totalling 700 MB apply in ~2 seconds and cost about

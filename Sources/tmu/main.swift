@@ -18,6 +18,7 @@ let usage = """
     tmu \(version) — multi-account Claude Desktop
 
     USAGE
+      tmu doctor                         check this install and say what is wrong
       tmu instances                      list installed instances
       tmu usage                          plan usage per account
       tmu steer [--yes]                  which account to work in
@@ -418,6 +419,8 @@ if let command = args.first, !["help", "--help", "-h", "--version"].contains(com
 switch args.first {
 case "instances":
     cmdInstances()
+case "doctor":
+    Doctor.run()
 case "usage":
     cmdUsage()
 case "steer":
