@@ -65,9 +65,21 @@ public enum LayoutAssignment {
         /// Rejected rather than stored: an unknown value decodes fine and then loses to the
         /// default at render time, so the setting would look accepted and change nothing.
         case unknownLayout(String)
-        /// The clearing token means "fall back to the default", so the default cannot be it.
-        case defaultCannotBeClearing
+        /// The default was asked to be a token that only means something relative to it.
+        ///
+        /// Carries what was typed. Both `default` and `auto` land here for different
+        /// reasons, and an error naming the wrong one of them is worse than no error: it
+        /// tells you to fix something you did not write.
+        case defaultCannotBe(String)
     }
+
+    /// The token that asks for the layout to be worked out from the display itself.
+    ///
+    /// Not a layout, so it is deliberately absent from `known` — `Settings.layout` will hand
+    /// it back untouched and the caller resolves it, because only the caller knows how big
+    /// the display is. Storing a resolved name instead would freeze today's answer into the
+    /// settings file and survive plugging in a different monitor.
+    public static let automatic = "auto"
 
     /// The token that clears a display's own choice.
     ///
@@ -78,16 +90,20 @@ public enum LayoutAssignment {
     public static let clearing = "default"
 
     public static func plan(target: String, choice: String, known: Set<String>) -> Outcome {
-        guard choice == clearing || known.contains(choice) else {
+        guard choice == clearing || choice == automatic || known.contains(choice) else {
             return .unknownLayout(choice)
         }
         guard target == "--default" else {
             return choice == clearing
                 ? .clear(display: target)
-                : .assign(
-                    display: target, layout: choice)
+                : .assign(display: target, layout: choice)
         }
-        return choice == clearing ? .defaultCannotBeClearing : .setDefault(choice)
+        // The default is what an unassigned display falls back to, so it can be neither the
+        // token that means "fall back" nor the one that means "ask the display" — the
+        // second would make every unassigned display automatic, which is a different
+        // feature wearing this one's name.
+        guard choice != clearing, choice != automatic else { return .defaultCannotBe(choice) }
+        return .setDefault(choice)
     }
 }
 

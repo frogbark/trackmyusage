@@ -19,7 +19,8 @@ public struct AppKitDesktop: Desktop {
                 name: screen.localizedName,
                 canvas: WallpaperCanvas(
                     width: screen.frame.width * scale,
-                    height: screen.frame.height * scale))
+                    height: screen.frame.height * scale),
+                scale: scale)
         }
     }
 

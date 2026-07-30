@@ -95,9 +95,17 @@ The mechanism had shipped long before the affordance — settings keyed layouts 
 and the daemon honoured them, but nothing wrote the field and nothing printed an id, so
 using it meant hand-editing JSON with a key the tool would not tell you.
 
-**Still open:** choosing that layout automatically from the display's size, rather than
-being told. (Running on a schedule shipped as `install-wallpaper-agent.sh`, a login agent
-on a five-minute interval.)
+`tmud layout <id> auto` works it out from the display instead — judged in points rather
+than pixels, since resolution stopped tracking physical size the moment Retina existed. A
+14-inch laptop and a 27-inch 5K are near-identical by pixel count and 1512×982 against
+2560×1440 in points, which is the distinction that matters.
+
+One case it cannot decide: a 16-inch MacBook and a 24-inch 1080p monitor are both 1080
+points tall, because they fit the same amount of interface. Both get the rail, which is
+the recoverable error. See `LayoutFit`.
+
+**Still open:** nothing here. (Running on a schedule shipped as
+`install-wallpaper-agent.sh`, a login agent on a five-minute interval.)
 
 ---
 
