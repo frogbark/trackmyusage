@@ -206,6 +206,7 @@ per provider. Every adapter declares its minimum read-only scope in code.
 | `sign-clone.sh` | Inside-out re-signing (used by the above) |
 | `build-link.sh` | Build the deep-link broker |
 | `install-link-agent.sh` | Register the broker as a login agent |
+| `uninstall-link-agent.sh` | Stop the broker and hand `claude://` back |
 | `build-app.sh` | Build the menu bar app |
 | `finish-repair.sh` | One-off: migrate a Parall install into TrackMyUsage |
 | `remove-parall.sh` | One-off: remove Parall after verifying the migration |
