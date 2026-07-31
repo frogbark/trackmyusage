@@ -207,16 +207,63 @@ final class DiagnosticsTests: XCTestCase {
             registeredBundleIDs: registered ?? [bundleID])
     }
 
-    private func input(
+    func input(
         claudeInstalled: Bool = true, claudeVersion: String? = "1.24012.9",
         instances: [Diagnostics.Input.Instance] = [], brokerInstalled: Bool = true,
         brokerAgentLoaded: Bool = true, brokerRunning: Bool = true,
-        wallpaperAgentLoaded: Bool = true, keychainReachable: Bool = true
+        widget: WidgetInstallState = .ok, keychainReachable: Bool = true
     ) -> Diagnostics.Input {
         Diagnostics.Input(
             claudeInstalled: claudeInstalled, claudeVersion: claudeVersion,
             instances: instances, brokerInstalled: brokerInstalled,
             brokerAgentLoaded: brokerAgentLoaded, brokerRunning: brokerRunning,
-            wallpaperAgentLoaded: wallpaperAgentLoaded, keychainReachable: keychainReachable)
+            widget: widget, keychainReachable: keychainReachable)
+    }
+}
+
+// MARK: - Widget
+
+extension DiagnosticsTests {
+
+    /// The distinction the four-case enum exists for. An ad-hoc signature cannot carry an App
+    /// Group entitlement, so a build made without a certificate has no widget by construction.
+    /// Reporting that as damage sends every contributor without a signing identity looking for
+    /// a fault that is not there.
+    func testAnAdHocBuildWithNoWidgetIsNotReportedAsDamage() throws {
+        let findings = Diagnostics.run(input(widget: .unsignedBuild))
+        let widget = try XCTUnwrap(findings.first { $0.subject == "Usage widget" })
+
+        XCTAssertEqual(widget.level, .warn, "a warning, not a failure")
+        XCTAssertTrue(
+            widget.consequence?.contains("Not a fault") ?? false,
+            "it must say so in words: \(widget.consequence ?? "nil")")
+    }
+
+    /// A signed build that carries no extension is a different situation with a different fix,
+    /// and the two must not read the same.
+    func testAMissingExtensionOnASignedBuildIsDistinctFromAnAdHocBuild() throws {
+        let missing = try XCTUnwrap(
+            Diagnostics.run(input(widget: .missing)).first { $0.subject == "Usage widget" })
+        let adHoc = try XCTUnwrap(
+            Diagnostics.run(input(widget: .unsignedBuild)).first { $0.subject == "Usage widget" })
+
+        XCTAssertNotEqual(missing.summary, adHoc.summary)
+        XCTAssertTrue(missing.consequence?.contains("build-app.sh") ?? false)
+    }
+
+    /// A frozen widget is honest about itself — it marks its own numbers `?` — so the doctor
+    /// says what to do rather than implying the data is wrong.
+    func testAFrozenWidgetIsExplainedRatherThanTreatedAsAFailure() throws {
+        let frozen = try XCTUnwrap(
+            Diagnostics.run(input(widget: .frozen)).first { $0.subject == "Usage widget" })
+
+        XCTAssertEqual(frozen.level, .warn)
+        XCTAssertTrue(frozen.consequence?.contains("running") ?? false)
+    }
+
+    func testAWorkingWidgetReportsOk() throws {
+        let ok = try XCTUnwrap(
+            Diagnostics.run(input(widget: .ok)).first { $0.subject == "Usage widget" })
+        XCTAssertEqual(ok.level, .ok)
     }
 }
