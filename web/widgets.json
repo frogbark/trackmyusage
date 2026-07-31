@@ -1,0 +1,354 @@
+{
+  "busy-large" : {
+    "asOf" : "03:33",
+    "attention" : "alert",
+    "family" : "large",
+    "headline" : {
+      "display" : "104%",
+      "isStale" : false,
+      "name" : "openai",
+      "sparkline" : [
+
+      ],
+      "state" : "over",
+      "utilization" : 104
+    },
+    "isStale" : false,
+    "overflow" : 13,
+    "renewals" : [
+      {
+        "daysAway" : "3d",
+        "name" : "vercel",
+        "state" : "ok"
+      },
+      {
+        "daysAway" : "11d",
+        "name" : "twilio",
+        "state" : "ok"
+      },
+      {
+        "daysAway" : "18d",
+        "name" : "github",
+        "state" : "warn"
+      }
+    ],
+    "rows" : [
+      {
+        "display" : "62%",
+        "isStale" : false,
+        "name" : "Claude",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 62,
+        "windowLabel" : "5-hour"
+      },
+      {
+        "display" : "96%",
+        "isStale" : false,
+        "name" : "Claude Two",
+        "sparkline" : [
+
+        ],
+        "state" : "warn",
+        "utilization" : 96,
+        "windowLabel" : "5-hour"
+      },
+      {
+        "display" : "88%",
+        "isStale" : false,
+        "name" : "elevenlabs",
+        "sparkline" : [
+
+        ],
+        "state" : "warn",
+        "utilization" : 88
+      },
+      {
+        "display" : "98%",
+        "isStale" : false,
+        "name" : "github",
+        "sparkline" : [
+          90,
+          91,
+          92,
+          92,
+          93,
+          94,
+          95,
+          96,
+          97,
+          97,
+          98,
+          98
+        ],
+        "state" : "warn",
+        "utilization" : 98
+      },
+      {
+        "display" : "104%",
+        "isStale" : false,
+        "name" : "openai",
+        "sparkline" : [
+
+        ],
+        "state" : "over",
+        "utilization" : 104
+      },
+      {
+        "display" : "71%",
+        "isStale" : false,
+        "name" : "vercel",
+        "sparkline" : [
+          12,
+          18,
+          24,
+          31,
+          29,
+          38,
+          44,
+          51,
+          49,
+          58,
+          63,
+          71
+        ],
+        "state" : "ok",
+        "utilization" : 71
+      }
+    ]
+  },
+  "busy-medium" : {
+    "asOf" : "03:33",
+    "attention" : "alert",
+    "family" : "medium",
+    "headline" : {
+      "display" : "104%",
+      "isStale" : false,
+      "name" : "openai",
+      "sparkline" : [
+
+      ],
+      "state" : "over",
+      "utilization" : 104
+    },
+    "isStale" : false,
+    "overflow" : 0,
+    "renewals" : [
+
+    ],
+    "rows" : [
+      {
+        "display" : "62%",
+        "isStale" : false,
+        "name" : "Claude",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 62,
+        "windowLabel" : "5-hour"
+      },
+      {
+        "display" : "96%",
+        "isStale" : false,
+        "name" : "Claude Two",
+        "sparkline" : [
+
+        ],
+        "state" : "warn",
+        "utilization" : 96,
+        "windowLabel" : "5-hour"
+      }
+    ]
+  },
+  "busy-small" : {
+    "asOf" : "03:33",
+    "attention" : "alert",
+    "family" : "small",
+    "headline" : {
+      "display" : "104%",
+      "isStale" : false,
+      "name" : "openai",
+      "sparkline" : [
+
+      ],
+      "state" : "over",
+      "utilization" : 104
+    },
+    "isStale" : false,
+    "overflow" : 0,
+    "renewals" : [
+
+    ],
+    "rows" : [
+
+    ]
+  },
+  "calm-large" : {
+    "asOf" : "03:33",
+    "attention" : "quiet",
+    "family" : "large",
+    "headline" : {
+      "display" : "41%",
+      "isStale" : false,
+      "name" : "openai",
+      "sparkline" : [
+
+      ],
+      "state" : "ok",
+      "utilization" : 41
+    },
+    "isStale" : false,
+    "overflow" : 11,
+    "renewals" : [
+      {
+        "daysAway" : "6d",
+        "name" : "twilio",
+        "state" : "ok"
+      },
+      {
+        "daysAway" : "12d",
+        "name" : "vercel",
+        "state" : "ok"
+      },
+      {
+        "daysAway" : "21d",
+        "name" : "github",
+        "state" : "ok"
+      }
+    ],
+    "rows" : [
+      {
+        "display" : "12%",
+        "isStale" : false,
+        "name" : "Claude",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 12,
+        "windowLabel" : "5-hour"
+      },
+      {
+        "display" : "31%",
+        "isStale" : false,
+        "name" : "Claude Two",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 31,
+        "windowLabel" : "5-hour"
+      },
+      {
+        "display" : "33%",
+        "isStale" : false,
+        "name" : "elevenlabs",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 33
+      },
+      {
+        "display" : "29%",
+        "isStale" : false,
+        "name" : "firecrawl",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 28.999999999999996
+      },
+      {
+        "display" : "36%",
+        "isStale" : false,
+        "name" : "hostinger",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 36
+      },
+      {
+        "display" : "41%",
+        "isStale" : false,
+        "name" : "openai",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 41
+      }
+    ]
+  },
+  "calm-medium" : {
+    "asOf" : "03:33",
+    "attention" : "quiet",
+    "family" : "medium",
+    "headline" : {
+      "display" : "41%",
+      "isStale" : false,
+      "name" : "openai",
+      "sparkline" : [
+
+      ],
+      "state" : "ok",
+      "utilization" : 41
+    },
+    "isStale" : false,
+    "overflow" : 0,
+    "renewals" : [
+
+    ],
+    "rows" : [
+      {
+        "display" : "12%",
+        "isStale" : false,
+        "name" : "Claude",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 12,
+        "windowLabel" : "5-hour"
+      },
+      {
+        "display" : "31%",
+        "isStale" : false,
+        "name" : "Claude Two",
+        "sparkline" : [
+
+        ],
+        "state" : "ok",
+        "utilization" : 31,
+        "windowLabel" : "5-hour"
+      }
+    ]
+  },
+  "calm-small" : {
+    "asOf" : "03:33",
+    "attention" : "quiet",
+    "family" : "small",
+    "headline" : {
+      "display" : "41%",
+      "isStale" : false,
+      "name" : "openai",
+      "sparkline" : [
+
+      ],
+      "state" : "ok",
+      "utilization" : 41
+    },
+    "isStale" : false,
+    "overflow" : 0,
+    "renewals" : [
+
+    ],
+    "rows" : [
+
+    ]
+  }
+}
