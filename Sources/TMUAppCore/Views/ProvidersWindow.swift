@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import TMUDesign
 import TMUProviders
+import TMUWidgets
 
 /// One place to connect every metered service.
 ///

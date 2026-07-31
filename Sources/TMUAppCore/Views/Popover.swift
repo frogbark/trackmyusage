@@ -1,6 +1,7 @@
 import SwiftUI
 import TMUDesign
 import TMUTelemetry
+import TMUWidgets
 
 /// 1f/3c — the menu bar panel.
 ///

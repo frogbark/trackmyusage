@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import TMUDesign
 import TMUKit
+import TMUWidgets
 
 /// Bringing an instance to the front.
 public enum Switcher {

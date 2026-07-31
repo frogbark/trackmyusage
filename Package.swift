@@ -93,6 +93,10 @@ let package = Package(
             name: "TMUAppCore",
             dependencies: [
                 "TMUKit", "TMUProviders", "TMUClaude", "TMUTelemetry", "TMUDesign",
+                // For SharedContainer (the app publishes what the widget reads) and for the
+                // one SwiftUI palette adapter, which lives with the views rather than being
+                // written out twice.
+                "TMUWidgets",
             ]),
         .executableTarget(name: "TMUApp", dependencies: ["TMUAppCore"]),
         .testTarget(name: "TMUDesignTests", dependencies: ["TMUDesign"]),
