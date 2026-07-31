@@ -36,8 +36,12 @@ final class MigrationIntegrationTests: XCTestCase {
              "pristine":"file://\(home.path)/Library/Caches/Claudruple/wallpaper/desktop-b.png"}}}
             """, to: "Library/Caches/Claudruple/wallpaper/state.json")
         try write("log", to: "Library/Logs/Claudruple/wallpaper.log")
+        // A wallpaper that actually exists, so the teardown can move the desktop off our
+        // render and is therefore allowed to delete it. The case where the recorded original
+        // has since been deleted — and the renders must be kept — is covered in MigrationTests.
+        try write("jpeg", to: "Pictures/before.jpg")
         try write(
-            "/System/.../Lake.heic",
+            home.appendingPathComponent("Pictures/before.jpg").path,
             to: "Library/Application Support/Claudruple/original-wallpaper.txt")
 
         // The thing that must not move: a signed-in instance profile, beside our file.

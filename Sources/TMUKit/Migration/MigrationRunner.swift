@@ -123,15 +123,33 @@ public struct MigrationRunner: Sendable {
         }
 
         // 2. Put the desktop back, from whichever support directory still holds the record.
-        if let restored = try restoreRecordedWallpaper() {
-            did.append(restored)
-        }
+        let restored = try restoreRecordedWallpaper()
+        if let note = restored.note { did.append(note) }
 
-        // 3. Only now delete the renders.
-        for directory in LegacyPaths.renderedWallpaperDirectories(home: home)
-        where files.exists(directory) {
-            try files.remove(directory)
-            did.append("removed \(directory.lastPathComponent) renders")
+        // 3. Delete the renders — but only if the desktop was actually moved off them.
+        //
+        // This is the case that does not appear in any fixture and does appear on a real
+        // machine: the agent is running, the renders exist, and there is no recorded original
+        // because install-wallpaper-agent.sh only writes one when it successfully captured a
+        // pre-existing wallpaper. The desktop is displaying one of these files right now.
+        // Deleting it would leave macOS rendering a background whose source is gone, with no
+        // way back and nothing on screen explaining why.
+        //
+        // A stale render is recoverable — the user picks a new wallpaper whenever they notice.
+        // A deleted one is not. So when the restore did not happen, the renders stay and the
+        // receipt says why.
+        if restored.movedDesktop {
+            for directory in LegacyPaths.renderedWallpaperDirectories(home: home)
+            where files.exists(directory) {
+                try files.remove(directory)
+                did.append("removed \(directory.lastPathComponent) renders")
+            }
+        } else if LegacyPaths.renderedWallpaperDirectories(home: home).contains(where: files.exists)
+        {
+            did.append(
+                "left the renders in place — your desktop is still showing one, and there was "
+                    + "nothing recorded to put back. Choose a wallpaper in System Settings, "
+                    + "then delete ~/Library/Caches/TrackMyUsage/wallpaper")
         }
 
         return did.isEmpty ? .skipped("no wallpaper install to remove") : .done
@@ -139,30 +157,36 @@ public struct MigrationRunner: Sendable {
 
     /// Restore the background the wallpaper agent replaced, if it is still there to restore.
     ///
-    /// Returns nil when there was nothing recorded, and a note when there was a record but the
-    /// file it names has since been deleted. That second case is reported rather than treated
-    /// as a failure: a person who deleted their old wallpaper is not a migration that went
-    /// wrong, and failing here would re-run every other step on the next launch forever.
-    private func restoreRecordedWallpaper() throws -> String? {
+    /// `movedDesktop` is the part callers act on: it is the difference between a desktop now
+    /// showing something of the user's own and one still showing our render. Only the first
+    /// makes the renders safe to delete.
+    ///
+    /// Every non-restoring outcome is reported rather than failed. A person who deleted their
+    /// old wallpaper is not a migration that went wrong, and failing here would keep the
+    /// receipt incomplete and re-run every other step on every launch forever.
+    private func restoreRecordedWallpaper() throws -> (movedDesktop: Bool, note: String?) {
         guard
             let record = LegacyPaths.recordedOriginalWallpaper(home: home)
                 .first(where: files.exists)
-        else { return nil }
+        else { return (false, nil) }
 
         let path =
             String(data: try files.read(record), encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         try files.remove(record)
 
-        guard !path.isEmpty else { return "no original was recorded" }
+        guard !path.isEmpty else { return (false, "no original was recorded") }
         let original = URL(fileURLWithPath: path)
         guard files.exists(original) else {
-            return
-                "recorded original is gone (\(original.lastPathComponent)) — set one in System Settings"
+            return (
+                false,
+                "recorded original is gone (\(original.lastPathComponent)) — "
+                    + "choose one in System Settings"
+            )
         }
 
         try desktop.setDesktopImage(original)
-        return "restored \(original.lastPathComponent)"
+        return (true, "restored \(original.lastPathComponent)")
     }
 
     /// Relabel the launch agents, but only when there is something for them to run.

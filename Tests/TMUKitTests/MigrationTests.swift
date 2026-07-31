@@ -300,6 +300,45 @@ final class MigrationRunnerTests: XCTestCase {
         XCTAssertEqual(desktop.set.map(\.path), [original])
     }
 
+    /// The state a real machine was actually in, which no fixture covered: the agent running,
+    /// the renders present, and *no* recorded original — install-wallpaper-agent.sh only
+    /// writes one when it successfully captured a pre-existing wallpaper.
+    ///
+    /// The desktop is displaying one of those renders right now. Deleting it would leave macOS
+    /// rendering a background whose source is gone, with no way back and nothing on screen
+    /// explaining why. A stale render is recoverable; a deleted one is not.
+    func testRendersAreKeptWhenTheDesktopCouldNotBeMovedOffThem() throws {
+        let renders = "Library/Caches/TrackMyUsage/wallpaper"
+        let files = FakeFiles(
+            present: abs("Library/LaunchAgents/com.trackmyusage.wallpaper.plist", renders))
+
+        let desktop = FakeDesktop()
+        let receipt = runner(files: files, desktop: desktop)
+            .run(MigrationPlan(steps: [.wallpaperTeardown]))
+
+        XCTAssertTrue(desktop.set.isEmpty, "nothing was recorded, so nothing could be restored")
+        XCTAssertTrue(
+            files.exists(home.appendingPathComponent(renders)),
+            "the file the desktop is showing must not be deleted")
+        XCTAssertFalse(receipt.outcome(for: .wallpaperTeardown)?.isFailure ?? true)
+    }
+
+    /// And the converse: once the desktop really has been moved to the user's own wallpaper,
+    /// the renders are just litter and do get removed.
+    func testRendersAreRemovedOnceTheDesktopHasBeenMovedOffThem() throws {
+        let record = "Library/Application Support/TrackMyUsage/original-wallpaper.txt"
+        let renders = "Library/Caches/TrackMyUsage/wallpaper"
+        let original = "/Users/example/Pictures/dunes.heic"
+        let files = FakeFiles(present: abs(record, renders) + [original])
+        files.contents[home.appendingPathComponent(record).path] = Data(original.utf8)
+
+        let desktop = FakeDesktop()
+        _ = runner(files: files, desktop: desktop).run(MigrationPlan(steps: [.wallpaperTeardown]))
+
+        XCTAssertEqual(desktop.set.map(\.path), [original])
+        XCTAssertFalse(files.exists(home.appendingPathComponent(renders)))
+    }
+
     /// Idempotent: a second run on a clean machine must skip, not fail. The receipt only marks
     /// complete when every step is non-failing, so a step that failed on nothing would re-run
     /// the whole migration on every launch forever.

@@ -207,8 +207,13 @@ provider is included when it needs no credential or has one stored.
 
 **Upgrading from the wallpaper?** Nothing to do. The first launch after upgrading stops the
 wallpaper agent, restores the background you had before it first drew anything, and deletes
-the renders. macOS keeps no history of what a background used to be, so that record was the
-only way back and using it is not optional.
+the renders. macOS keeps no history of what a background used to be, so that record is the
+only way back.
+
+If there is no record — the agent only writes one when it found a wallpaper to save — it
+stops the agent and leaves the renders alone, because your desktop is still showing one of
+them and deleting it would leave macOS drawing a file that no longer exists. Pick a wallpaper
+in System Settings, then `rm -rf ~/Library/Caches/TrackMyUsage/wallpaper`.
 
 ### Metered service accounts
 
