@@ -24,6 +24,10 @@ public enum SharedContainer {
     /// The published telemetry, inside the container.
     public static let modelFilename = "telemetry.json"
 
+    /// The widget kind, shared so the publisher and the extension cannot drift apart. A
+    /// mismatch here reloads nothing and reports no error.
+    public static let widgetKind = "usage"
+
     public static func groupIdentifier(bundle: Bundle = .main) -> String? {
         guard let value = bundle.object(forInfoDictionaryKey: infoKey) as? String,
             !value.isEmpty

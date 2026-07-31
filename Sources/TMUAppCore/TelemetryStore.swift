@@ -82,6 +82,7 @@ public final class TelemetryStore: ObservableObject {
     private let instanceSource: any InstanceReading
     private let providerSource: any ProviderReadingSource
     private let cache: SnapshotCache
+    private let widgets: WidgetPublisher
     private var alerts = AlertPolicy()
     private var providerSnapshots: [UsageSnapshot] = []
     private var instanceSnapshots: [UsageSnapshot] = []
@@ -95,12 +96,14 @@ public final class TelemetryStore: ObservableObject {
         providerSource: any ProviderReadingSource = NetworkProviders(),
         cache: SnapshotCache = SnapshotCache(),
         settings: Settings = SettingsStore.load(),
+        widgets: WidgetPublisher = WidgetPublisher(),
         startTimers: Bool = true
     ) {
         self.instanceSource = instanceSource
         self.providerSource = providerSource
         self.cache = cache
         self.settings = settings
+        self.widgets = widgets
 
         // Load the last good readings synchronously so the popover has content the instant
         // it opens. Each snapshot carries its real observedAt, so anything over half an hour
@@ -164,6 +167,9 @@ public final class TelemetryStore: ObservableObject {
     private func rebuild() {
         model = TelemetryModel.build(
             snapshots: instanceSnapshots + providerSnapshots, now: Date())
+        // The one place the model is built is the one place the widget is told about it, so
+        // the two cannot disagree about what is current.
+        widgets.publish(model)
     }
 
     // MARK: - Notifications

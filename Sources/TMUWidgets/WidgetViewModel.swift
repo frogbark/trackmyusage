@@ -166,6 +166,17 @@ public struct WidgetViewModel: Codable, Equatable, Sendable {
             emptyReason: everything.isEmpty ? "no data" : nil)
     }
 
+    /// What to show before anything has been published, and when nothing can be read.
+    ///
+    /// Not an empty view. A blank widget in the picker looks like a broken app, and a widget
+    /// that has genuinely never received data is in the same position as one whose provider
+    /// went quiet — the honest answer to both is to say there is nothing yet.
+    public static func placeholder(family: WidgetFamilyID) -> WidgetViewModel {
+        WidgetViewModel(
+            family: family, headline: nil, rows: [], overflow: 0, renewals: [],
+            attention: .quiet, asOf: "--:--", isStale: false, emptyReason: "no data yet")
+    }
+
     /// Which rows survive truncation, and in what order they are drawn.
     ///
     /// Two different questions, answered differently on purpose.

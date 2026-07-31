@@ -257,3 +257,34 @@ extension WidgetViewModelTests {
         XCTAssertEqual(vm.rows.map(\.name), vm.rows.map(\.name).sorted())
     }
 }
+
+// MARK: - Encoding stability
+
+extension WidgetViewModelTests {
+
+    /// web/widgets.json is byte-compared by check-generated.sh, and a plain JSONEncoder emits
+    /// the same value with its keys in a different order each call. Without sorted keys the
+    /// committed file would differ on every regeneration and CI would fail for a reason no
+    /// commit could fix — which invites "fixing" it by excluding the file from comparison,
+    /// destroying the guarantee it exists to provide.
+    func testTheCanonicalEncodingIsByteStableAcrossCalls() throws {
+        let vm = WidgetViewModel.make(from: Fixtures.model(at: now), family: .large, at: now)
+
+        let first = try CanonicalJSON.encode(vm)
+        for _ in 0..<20 {
+            XCTAssertEqual(try CanonicalJSON.encode(vm), first)
+        }
+    }
+
+    /// The property above is exactly what a bare JSONEncoder does not have. If this ever
+    /// starts passing, Foundation has changed and the comment on CanonicalJSON is stale.
+    func testAPlainEncoderIsNotByteStableWhichIsWhyCanonicalJSONExists() throws {
+        let vm = WidgetViewModel.make(from: Fixtures.model(at: now), family: .large, at: now)
+        let plain = JSONEncoder()
+
+        let encodings = try (0..<40).map { _ in try plain.encode(vm) }
+        XCTAssertGreaterThan(
+            Set(encodings).count, 1,
+            "a plain JSONEncoder became stable; CanonicalJSON's rationale needs revisiting")
+    }
+}
