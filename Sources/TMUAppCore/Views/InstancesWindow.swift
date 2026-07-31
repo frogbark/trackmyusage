@@ -156,7 +156,7 @@ private struct InstanceCard: View {
                 }
             }
 
-            // Absence stated, never drawn as zero — the same rule the wallpaper follows.
+            // Absence stated, never drawn as zero — the same rule the widget follows.
             // An instance with no history renders no meters, and without a line saying why
             // the card is simply a name with a gap under it, which reads as a bug rather
             // than as a fact about the instance.

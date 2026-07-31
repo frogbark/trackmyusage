@@ -7,7 +7,7 @@ Dock. A small broker makes sure sign-in and MCP OAuth callbacks reach the accoun
 asked for them, instead of whichever instance happened to launch last.
 
 > **Status: early.** Instances, deep-link routing, config sync, usage tracking, steering,
-> the menu bar app and the usage wallpaper all work and are in daily use. Five of seventeen
+> the menu bar app and the usage widget all work and are in daily use. Five of seventeen
 > provider integrations are built, two more have no public usage endpoint to build against,
 > and the remaining ten are planned — see [`docs/roadmap.md`](docs/roadmap.md). The Pro tier
 > described on the website is **not built**; nothing in this repository charges for anything.
@@ -158,59 +158,57 @@ Claude Code token logs; this is the app's own accounting.
 
 ### Your usage, on the desktop
 
-```bash
-swift build -c release
-.build/release/tmud status    # what it would draw, and onto what
-.build/release/tmud render    # write the image, leave the desktop alone
-.build/release/tmud apply     # write it and set it as the wallpaper
-```
+A WidgetKit widget in three sizes, placed wherever you want it from the desktop widget
+picker. This replaced a feature that painted the same numbers onto the wallpaper; macOS has a
+surface built for keeping a number visible without a window, and using it means the placement,
+the size, dark mode and VoiceOver are all handled rather than approximated.
 
-Composites every account's limit, and every service's, onto the desktop background. Three
-layouts, chosen per display:
-
-| `--layout` | |
+| Family | |
 |---|---|
-| `ledger` | a left rail naming every provider, with sparklines and a renewals line |
-| `board` | tiles across the bottom of a wide desktop; falls back to the rail if the display is too narrow |
-| `card` | a corner card: four named, the rest as bare bars, over a 30-day renewal axis |
+| small | the single reading nearest its limit, large enough to read across a room |
+| medium | the account ledger — name, utilisation and which window it is a percentage of |
+| large | accounts and services, with sparklines and what renews next |
 
-The card is also the one that changes with the weather. When everything is under 80% it dims
-to a whisper and stops enumerating — two accounts and one line confirming the rest was
-checked. When something is hot it grows, brightens and leads with the offender. Silence is
-information too.
+Where it truncates, it says so. The large family carries six rows out of however many you
+have, chosen by how close each is to its limit and then drawn in name order — so the row you
+need to see is present, and the rows you saw last time have not moved. Anything left over is
+counted as `+13 more` rather than quietly dropped.
 
-Each display can have its own, since a laptop beside a large monitor wants `card` on one and
-`ledger` on the other:
-
-```bash
-.build/release/tmud layout                     # every display, its id, and what it will get
-.build/release/tmud layout screen-1 card       # set one
-.build/release/tmud layout screen-1 auto       # or let the display decide
-.build/release/tmud layout screen-1 default    # clear it
-```
-
-`auto` judges the display in points rather than pixels, because resolution stopped tracking
-physical size the moment Retina existed — a 14-inch laptop and a 27-inch 5K are near-identical
-by pixel count and 1512×982 against 2560×1440 in points.
-
-`tmud` is one-shot and not resident, so on its own the wallpaper is a snapshot of the moment
-you ran it. The login agent is what keeps it current:
+The widget is built into the app, so installing it is installing the app:
 
 ```bash
-./scripts/install-wallpaper-agent.sh      # redraws every five minutes
-./scripts/uninstall-wallpaper-agent.sh    # stops, and puts your original wallpaper back
+IDENTITY="Apple Development: Your Name (TEAMID)" ./scripts/build-app.sh
+cp -R build/TrackMyUsage.app /Applications/
 ```
 
-It records the wallpaper you had before it first drew anything, because macOS keeps no history
-of what the background used to be — that record is the only way back.
+Then right-click the desktop, choose **Edit Widgets**, and find **Usage**.
 
-The pipeline is snapshots → model → SVG → raster → desktop, and everything up to the raster
-is a pure function — so a layout regression fails in `swift test` rather than appearing on
-your screen.
+**It needs a real signing identity.** A widget extension is mandatorily sandboxed, so it reads
+the app's readings through an App Group container, and that entitlement is bound to a Team ID
+— an ad-hoc signature cannot carry one. Building without `IDENTITY` gives you a complete,
+working menu bar app with no widget; `tmu doctor` reports that as a build without a
+certificate rather than as something broken. Your Team ID is never written into this
+repository: the build script derives it from the certificate.
+
+The app is what keeps the widget current. It already polls on its own timer, and on each
+refresh it writes the readings where the widget can read them. A placed widget is allowed only
+about forty to seventy system-initiated refreshes a day, which is why it does not poll for
+itself — and why, when the app is not running, the widget marks its numbers `?` rather than
+showing a frozen figure as though it were current. It works that out when it reads, so it
+still happens on time with nothing running.
+
+The pipeline is snapshots → model → view model → SwiftUI, and everything up to the view is
+text — so a layout regression fails in `swift test` and in `check-generated.sh` rather than
+appearing on your screen.
 
 Providers are fetched concurrently: seventeen adapters each allowed fifteen seconds would
-stall a serial render for four minutes, where in parallel the slowest one sets the cost. A
+stall a serial refresh for four minutes, where in parallel the slowest one sets the cost. A
 provider is included when it needs no credential or has one stored.
+
+**Upgrading from the wallpaper?** Nothing to do. The first launch after upgrading stops the
+wallpaper agent, restores the background you had before it first drew anything, and deletes
+the renders. macOS keeps no history of what a background used to be, so that record was the
+only way back and using it is not optional.
 
 ### Metered service accounts
 
@@ -248,8 +246,8 @@ settings screen never pulls your keys into memory to draw a list.
 | `install-link-agent.sh` | Register the broker as a login agent |
 | `uninstall-link-agent.sh` | Stop the broker and hand `claude://` back |
 | `build-app.sh` | Build the menu bar app |
-| `install-wallpaper-agent.sh` | Redraw the wallpaper every five minutes |
-| `uninstall-wallpaper-agent.sh` | Stop, and restore the wallpaper you had first |
+| `build-widget.sh` | Assemble and sign the widget extension (called by `build-app.sh`) |
+| `check-widget.sh` | Verify the assembled widget — structure, entitlements, signature |
 | `probe-codex.sh` | One-off: does a stripped Codex Desktop clone run? Undoes itself |
 | `finish-repair.sh` | One-off: migrate a Parall install into TrackMyUsage |
 | `remove-parall.sh` | One-off: remove Parall after verifying the migration |

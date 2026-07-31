@@ -4,10 +4,10 @@ import XCTest
 
 final class UsageStateTests: XCTestCase {
 
-    /// The wallpaper emits these as CSS classes — `<g class="row warn">` — and the
-    /// renderer's tests assert on those exact strings. Renaming a case is a silent visual
-    /// regression plus a set of tests that pass while checking nothing.
-    func testTheRawValuesAreWhatTheWallpaperEmitsAsClasses() {
+    /// These are keys in `web/widgets.json`, which `check-generated.sh` byte-compares. The
+    /// wallpaper emitted them as SVG CSS classes; that renderer is gone and the constraint
+    /// outlived it. Renaming a case silently rewrites a committed artifact.
+    func testTheRawValuesAreWhatTheGeneratedModelsAreKeyedOn() {
         XCTAssertEqual(
             UsageState.allCases.map(\.rawValue),
             ["ok", "warn", "over", "nodata", "uncapped"])
@@ -38,7 +38,7 @@ final class InkTests: XCTestCase {
 
     /// Pinned against the design handoff. These are not arbitrary: warn and over in
     /// particular are read at a glance from across a room, and a "tidier" green would
-    /// change what the wallpaper communicates.
+    /// change what the widget communicates.
     func testThePaletteMatchesTheHandoff() {
         XCTAssertEqual(Ink.scrim.value, "#0c1216")
         XCTAssertEqual(Ink.primary.value, "#eaf0f2")

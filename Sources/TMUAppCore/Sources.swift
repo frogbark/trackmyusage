@@ -147,7 +147,7 @@ public struct LocalInstances: InstanceReading {
         let worthShowing = advice.urgency == .none ? nil : advice
 
         return InstanceReadingResult(
-            // Through ClaudeUsage so the app and the wallpaper see identical values for the
+            // Through ClaudeUsage so the app and the widget see identical values for the
             // same account. Two paths to the same number is how they drift.
             snapshots: accounts.map(ClaudeUsage.snapshot(of:)),
             rows: rows,

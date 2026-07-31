@@ -1,27 +1,28 @@
 import Foundation
 import TMUProviders
 
-/// A fixed set of snapshots that exercises every state the wallpaper can draw.
+/// A fixed set of snapshots that exercises every state a surface can draw.
 ///
-/// This exists so the previews, and the images on the website, are produced by the same
-/// renderer that draws the real thing. A hand-drawn mockup of a usage panel is a promise
+/// This exists so the previews, and the images on the website, are produced by the same code
+/// that draws the real thing. A hand-drawn mockup of a usage panel is a promise
 /// about a layout nobody has run — and this project already refuses that bargain for
 /// provider adapters, where a parser written from a remembered API shape is
 /// indistinguishable from a correct one until it reports the wrong number. A screenshot of
 /// a design that was never rendered is the same mistake with a different file extension.
 ///
 /// The data is invented. The drawing is not: `busy()` and `calm()` go through
-/// `WallpaperSVG.render` exactly as a live reading would, so a layout that breaks here
-/// breaks on the site, visibly, before anyone's desktop sees it.
+/// `TelemetryModel.build` and `WidgetViewModel.make` exactly as a live reading would, so a
+/// layout that breaks here breaks the committed `web/widgets.json`, and CI says so before
+/// anyone's desktop sees it.
 public enum DemoSnapshots {
 
     /// The instant every demo render is dated to.
     ///
-    /// Frozen, and load-bearing. `generate-web.sh` writes these SVGs into `web/` and
-    /// `check-generated.sh` fails when the committed copies differ — so a renderer seeded
-    /// from `Date()` would emit a new "resets in" figure on every run and turn that check
-    /// into a daily false alarm. Freezing it makes the output a pure function of the code,
-    /// which is the only reason the staleness check means anything.
+    /// Frozen, and load-bearing. `generate-web.sh` writes the view models into `web/` and
+    /// `check-generated.sh` fails when the committed copy differs — so a model seeded from
+    /// `Date()` would emit a new "resets in" figure on every run and turn that check into a
+    /// daily false alarm. Freezing it makes the output a pure function of the code, which is
+    /// the only reason the staleness check means anything.
     public static let generatedAt = Date(timeIntervalSince1970: 1_784_000_000)
 
     /// The zone the frozen instant is drawn in.

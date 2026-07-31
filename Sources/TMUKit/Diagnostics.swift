@@ -9,7 +9,7 @@ import Foundation
 ///
 /// So the checks are stated as facts that ought to be true, each one tied to what breaks
 /// when it is not. Anything that cannot be established is reported as unknown rather than
-/// assumed fine, on the same rule the wallpaper follows when it draws "no data" instead of
+/// assumed fine, on the same rule the widget follows when it draws "no data" instead of
 /// zero: a check that cannot see is not a check that passed.
 /// What `tmu doctor` found when it looked for the widget.
 ///

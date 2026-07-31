@@ -4,7 +4,7 @@ import XCTest
 
 @testable import TMUTelemetry
 
-/// The clock on the wallpaper, and the zone it is read in.
+/// The clock on the widget, and the zone it is read in.
 ///
 /// This used to read `TimeZone.current`, which made the renderer a function of its inputs
 /// and the machine — the same frozen instant drew 20:33 on a laptop and 03:33 on a UTC

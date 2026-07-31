@@ -6,12 +6,11 @@
 TMUKit           instances · sync · Claude's local usage · steering
 TMUProviders         the provider SDK: HTTP seam, snapshots, credentials, adapters
 TMUClaude   Claude's local history as provider snapshots
-TMURender        usage → SVG → raster
-TMUDesktop       reading and writing the desktop background
+TMUWidgets       usage → WidgetViewModel → SwiftUI
 
 tmu              CLI: instances, sync, usage, steer, providers
-tmud             renders and applies the usage wallpaper
-TrackMyUsage.app          menu bar gauge and instance window
+TMUWidgetExtension        the desktop widget, built into the app
+TrackMyUsage.app          menu bar gauge, instance window and the widget
 TrackMyUsage Link.app     deep-link broker
 ```
 
@@ -21,9 +20,9 @@ TrackMyUsage Link.app     deep-link broker
 | Config sync — capture, plan, apply | **working** |
 | Claude usage, forecasting, steering | **working** |
 | Menu bar app | **working** |
-| Usage wallpaper | **working** |
+| Usage widget | **working** |
 | Provider adapters | 5 built · 2 blocked · 10 planned |
-| Wallpaper layouts | ledger, board, card + quiet/alert |
+| Widget families | small, medium, large |
 | Menu bar and instances window | **working** |
 | Rename migration | **working** |
 | Website | **working** |
@@ -75,37 +74,38 @@ holds `Claude Code-credentials` alongside `Claude Code-credentials-<hash>` entri
 the CLI selects among them is not established, and writing keychain items on a guess risks
 locking someone out of their own tooling.
 
-## Usage wallpaper ✅
+## Usage widget ✅
 
-`tmud` composites every provider's binding limit onto the desktop background.
+A WidgetKit desktop widget in three families, replacing the wallpaper that did this job until
+July 2026. macOS has a surface designed for keeping a number visible without a window, and
+using it buys placement and sizing owned by the user, Dynamic Type, dark mode and VoiceOver —
+none of which a composited background can have at any price.
 
-The pipeline is snapshots → SVG → raster → desktop, and the split is what makes it testable:
-the whole visual design is a pure function from snapshots to SVG text, so a layout
-regression fails in `swift test` rather than appearing on someone's screen. Only the last
-step is platform-specific.
+The pipeline is snapshots → `TelemetryModel` → `WidgetViewModel` → SwiftUI, and the split is
+what makes it testable: everything up to the view is text, so a layout regression fails in
+`swift test` and in `check-generated.sh` rather than appearing on someone's screen.
 
-Providers are fetched concurrently. Serially, seventeen adapters each allowed fifteen
-seconds could stall a render for four minutes; in parallel the slowest one sets the cost.
-A provider is included when it needs no credential or has one stored — fetching an
-unconfigured one would spend a render cycle drawing "unauthorized" on someone's desktop.
+The app owns refresh. It already polls, so on each rebuild it writes the model to the App
+Group container and calls `reloadTimelines`; the extension reads that file and nothing else.
+A placed widget gets roughly 40–70 system-initiated reloads a day, so a timeline asking to
+wake every 300s would be throttled to something unpredictable and mostly wrong.
 
-Per-display layout: `tmud layout <display-id> ledger|board|card`, or `--default` for
-displays with no choice of their own. `tmud status` and `tmud layout` both print the ids.
-The mechanism had shipped long before the affordance — settings keyed layouts by display
-and the daemon honoured them, but nothing wrote the field and nothing printed an id, so
-using it meant hand-editing JSON with a key the tool would not tell you.
+Ageing is precomputed rather than refreshed. One container read emits a fresh entry and a
+second dated to the freshness threshold holding the same numbers already marked stale, so a
+widget whose publisher has quit says so on the system's clock without anything waking it. A
+single entry with policy `.never` would present a frozen number as current indefinitely.
 
-`tmud layout <id> auto` works it out from the display instead — judged in points rather
-than pixels, since resolution stopped tracking physical size the moment Retina existed. A
-14-inch laptop and a 27-inch 5K are near-identical by pixel count and 1512×982 against
-2560×1440 in points, which is the distinction that matters.
+Truncation is decided by urgency and drawn in name order. `TelemetryModel` orders by name and
+says why, but that reasoning assumes the whole list is visible; applied to a truncation it
+picks an alphabetical six out of nineteen, which is how a first attempt hid a provider at 104%
+behind "+13 more" while the small family showed that same reading as its headline.
 
-One case it cannot decide: a 16-inch MacBook and a 24-inch 1080p monitor are both 1080
-points tall, because they fit the same amount of interface. Both get the rail, which is
-the recoverable error. See `LayoutFit`.
+**Still open:** per-account configuration via `AppIntentConfiguration`, so two small widgets
+can show different accounts. The data path is proven, so this is additive.
 
-**Still open:** nothing here. (Running on a schedule shipped as
-`install-wallpaper-agent.sh`, a login agent on a five-minute interval.)
+**Requires a signing identity.** A widget extension is mandatorily sandboxed and reads through
+an App Group, whose entitlement is Team-ID-bound; an ad-hoc build produces a complete app with
+no widget and `tmu doctor` says so rather than reporting damage.
 
 ---
 

@@ -1,7 +1,7 @@
 # TrackMyUsage
 
 Multi-account Claude Desktop management plus usage telemetry across your dev stack, on the
-menu bar and painted onto the desktop wallpaper.
+menu bar and in a desktop widget.
 
 The project was called **Claudruple** until mid-2026. That name still appears in four places
 on disk and always will — read the frozen-names section before changing any string that
@@ -13,8 +13,14 @@ Run this before every commit. All of it.
 
 ```bash
 swift build && swift test && swift build -c release \
+  && ./scripts/build-app.sh && ./scripts/check-widget.sh \
   && swift format lint --strict --recursive Sources Tests
 ```
+
+`swift build` and `swift test` cannot see the widget: the `.appex` exists only once
+`build-app.sh` has assembled it, and every way it can be wrong is silent — a missing
+`Info.plist` key registers nothing and logs nothing. `check-widget.sh` passes under an ad-hoc
+signature, so CI runs it without a certificate.
 
 `swift format` is a toolchain subcommand as of Swift 6 — there is nothing to install.
 
@@ -37,31 +43,44 @@ never a commit that changed behaviour.
 ```
 TMUDesign               the palette, ok/warn/over, thresholds, the brand mark
 TMUProviders            the provider SDK: HTTP seam, snapshots, credentials, adapters
-TMUTelemetry            raw snapshots → the one model every surface renders
+TMUTelemetry            raw snapshots → the one model every surface renders · demo fixtures
 TMUKit                  instances · sync · Claude's local usage · steering · migration
 TMUClaude               Claude's local history as provider snapshots
-TMURender               the model → SVG → raster
-TMUDesktop              reading and writing the desktop background
+TMUWidgets              the model → WidgetViewModel → SwiftUI · the shared container
 TMUAppCore              the app's stores and views, as a library
 
 tmu                     CLI: instances, sync, usage, steer, providers, assets
-tmud                    renders and applies the usage wallpaper (one-shot, not resident)
-TrackMyUsage.app        menu bar gauge and instances window
+TMUWidgetExtension      the widget itself; built into the app as an .appex
+TrackMyUsage.app        menu bar gauge, instances window, and the widget
 TrackMyUsage Link.app   deep-link broker
 ```
 
 `TMUDesign` and `TMUProviders` depend on **nothing**, deliberately, and CI has a Linux job
 that proves it. `TMUTelemetry` is the choke point where snapshots become drawable — the
-wallpaper, the pill, the popover and the instances window all render the same
-`TelemetryModel`, which is the only structural guarantee they agree.
+widget, the pill, the popover and the instances window all render the same `TelemetryModel`,
+which is the only structural guarantee they agree.
+
+`TMUWidgets` deliberately depends on neither `TMUKit` nor `TMUProviders`: the extension is
+sandboxed and has no business reaching the keychain, the network or `/Applications`. It also
+does not import WidgetKit — only the extension does — so the same views render identically in
+the CLI, the tests and the widget.
 
 Modules are TMU-prefixed rather than spelling the brand out — `TrackMyUsageUsage` is
 indefensible, and the brand already contains the word. The full name lives where people
 actually meet it: the binaries, the bundles, the domain.
 
-Pure SPM — there is **no Xcode project**. Both `.app` bundles are assembled by hand in
-`scripts/build-app.sh` and `scripts/build-link.sh`, so a new Info.plist key, entitlement,
-icon or resource is a change to a bash heredoc, not to a project file.
+Pure SPM — there is **no Xcode project**. Both `.app` bundles and the `.appex` are assembled
+by hand in `scripts/build-app.sh`, `scripts/build-link.sh` and `scripts/build-widget.sh`, so a
+new Info.plist key, entitlement, icon or resource is a change to a bash heredoc, not to a
+project file.
+
+**The widget needs real signing.** A widget extension is mandatorily sandboxed, so it reads
+the app's telemetry through an App Group, and `com.apple.security.application-groups` is
+Team-ID-bound — an ad-hoc signature cannot carry it. `IDENTITY=-` therefore produces a
+complete, working app with no widget, which is a supported configuration and not a fault;
+`tmu doctor` distinguishes it from a broken install. Set `IDENTITY` to a Developer certificate
+to get the widget. The Team ID is never committed: `build-app.sh` derives it and writes it
+into both bundles under `TMUAppGroupIdentifier`.
 
 ## Names that are frozen, and why
 
@@ -94,12 +113,23 @@ failed, which is the only reason it was caught.
 These are decisions, not accidents. Each one has a comment at its site explaining it; if you
 are about to change one, read that comment first.
 
-- **SVG colours are presentation attributes, never a `<style>` block.** Rasterisers implement
-  CSS unevenly, and the renderer's tests assert on state classes. See the note at the top of
-  `WallpaperSVG.swift`.
-- **Rendering is a pure function of its inputs.** `snapshots → SVG string`. The daemon owns
-  every byte of I/O. This is why a layout regression fails in `swift test` instead of
-  appearing on somebody's desktop.
+- **Rendering is a pure function of its inputs.** `snapshots → TelemetryModel →
+  WidgetViewModel`, all text, all comparable. The SwiftUI views hold layout and nothing else:
+  no formatting, no threshold comparison, no date arithmetic. A view that computes something
+  is a view whose output the goldens do not describe. This is why a layout regression fails in
+  `swift test` and in `check-generated.sh` instead of appearing on somebody's desktop.
+- **The widget only ever reads a file.** The app polls, writes `TelemetryModel` to the App
+  Group container and calls `reloadTimelines`; the extension reads that and nothing else. It
+  has no network, no keychain and no provider code, which is enforced by its dependencies
+  rather than by convention.
+- **Widget staleness is precomputed, never refreshed.** One container read emits a fresh entry
+  and a second dated to the freshness threshold, already marked. A single entry with policy
+  `.never` would leave a frozen widget presenting an old number as current forever, because
+  nothing would ever ask it to render again.
+- **All published and generated JSON goes through `CanonicalJSON`.** `JSONEncoder` orders keys
+  by a per-process hash seed, so the same value encodes differently between runs — which would
+  make `web/widgets.json` differ between the machine that committed it and the runner that
+  regenerates it.
 - **`HTTPClient` has exactly one method, `get`.** That single-method protocol *is* the
   GET-only enforcement — there is no other verb to call. An adapter that could POST is an
   adapter that could be made to change something.
@@ -131,7 +161,16 @@ Never hand-edit these; regenerate them and commit the result. CI fails if they a
 
 - `web/providers.json` — from `ProviderRegistry`, via `tmu provider --json`
 - `web/mark.svg`, `web/icon.svg` — from `BrandMark`, via `tmu assets mark`
+- `web/widgets.json` — from `WidgetViewModel` × `DemoWidget`, via `tmu assets widget-models`
+- `web/widget-*.png`, `web/og.png` — via `tmu assets widget` / `social`
 
 Regenerate with `./scripts/generate-web.sh`. CI runs `./scripts/check-generated.sh` and fails
 if the committed copies differ, which is what makes the provider counts on the website
 structurally unable to overstate what actually ships.
+
+The PNGs are excluded from that comparison — CoreGraphics and the installed fonts decide their
+bytes and neither is in this repository. `web/widgets.json` is what carries the guarantee
+instead: it holds the view models those images are drawn from, as text, and a layout change
+alters the model before it alters a pixel. It is the successor to the wallpaper SVGs, which
+did this job when the renderer emitted text. **Do not exclude it** to fix a spurious diff —
+that would quietly delete the check.

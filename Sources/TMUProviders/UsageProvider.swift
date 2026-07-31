@@ -89,7 +89,7 @@ extension UsageProvider {
     ///
     /// A provider being down, rate-limited, or unconfigured is the normal state of at least
     /// one of seventeen at any moment. Propagating that would let a single timeout take out
-    /// the whole render, and the wallpaper's own design already has a place to show it.
+    /// the whole render, and every surface already has a place to show it.
     public func snapshot(credentials: CredentialStore, now: Date) async -> UsageSnapshot {
         let secret: String?
         do {

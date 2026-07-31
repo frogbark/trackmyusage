@@ -24,7 +24,7 @@ final class InstanceFreshnessTests: XCTestCase {
 
     /// Prevents: reporting "up to date" about a clone whose version nobody could read.
     ///
-    /// A missing reading is not a passing one — the same rule the wallpaper follows when it
+    /// A missing reading is not a passing one — the same rule the widget follows when it
     /// draws "no data" rather than zero.
     func testAMissingVersionOnEitherSideIsUnknownRatherThanCurrent() {
         XCTAssertEqual(InstanceFreshness.compare(clone: nil, installed: "0.16.1"), .unknown)

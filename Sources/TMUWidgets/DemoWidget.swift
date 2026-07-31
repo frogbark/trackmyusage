@@ -3,12 +3,12 @@ import TMUTelemetry
 
 /// The demo renders worth producing, one per state the widget has.
 ///
-/// Inherits `DemoWallpaper`'s job and its reasoning. The images on the website come out of the
-/// same code that draws the real widget, so the site cannot show a layout the binary does not
-/// produce. A hand-made mockup would be a promise about a design nobody ran — the same mistake
-/// this project already refuses for provider adapters, where a parser written from a
-/// remembered API shape is indistinguishable from a correct one until it reports the wrong
-/// number.
+/// Inherits the deleted DemoWallpaper's job and its reasoning. The images on the website come
+/// out of the same code that draws the real widget, so the site cannot show a layout the
+/// binary does not produce. A hand-made mockup would be a promise about a design nobody ran
+/// — the same mistake this project already refuses for provider adapters, where a parser
+/// written from a remembered API shape is indistinguishable from a correct one until it
+/// reports the wrong number.
 ///
 /// Two cases rather than the wallpaper's four: the wallpaper had a layout per case, and the
 /// widget has a family per size instead, so what is left to vary is the data.

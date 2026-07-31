@@ -99,7 +99,7 @@ final class TelemetryStoreTests: XCTestCase {
         XCTAssertEqual(subject.model.services.map(\.name), ["github"])
     }
 
-    /// The same value the wallpaper renders, so the two surfaces cannot disagree.
+    /// The same value the widget renders, so the two surfaces cannot disagree.
     func testAccountsAndServicesShareOneInterpretation() async {
         let subject = store(
             instances: [snapshot("claude", 96, account: "Claude Two")],

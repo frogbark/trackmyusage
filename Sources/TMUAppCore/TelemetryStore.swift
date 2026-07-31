@@ -21,7 +21,7 @@ import TMUTelemetry
 @MainActor
 public final class TelemetryStore: ObservableObject {
 
-    /// One Claude instance, with the instance-management details the wallpaper does not need.
+    /// One Claude instance, with the instance-management details the widget does not need.
     public struct InstanceRow: Identifiable, Sendable {
         public let id: String
         public let name: String

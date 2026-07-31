@@ -39,7 +39,7 @@ final class DiagnosticsTests: XCTestCase {
 
     /// Prevents: an unreadable launcher being reported as a healthy instance.
     ///
-    /// Unknown is its own level for the same reason the wallpaper draws "no data" rather
+    /// Unknown is its own level for the same reason the widget draws "no data" rather
     /// than zero. A check that could not see is not a check that passed.
     func testAnUnreadableLauncherIsUnknownRatherThanHealthy() throws {
         let findings = Diagnostics.run(
@@ -161,7 +161,7 @@ final class DiagnosticsTests: XCTestCase {
 
     /// Prevents: `isHealthy` drifting to include warnings.
     ///
-    /// Warnings are choices — no wallpaper agent, a clone left on an old build. Failing the
+    /// Warnings are choices — no widget installed, a clone left on an old build. Failing the
     /// exit code on those would make `tmu doctor` useless in a script, which is the only
     /// reason it has an exit code.
     func testWarningsAndUnknownsDoNotMakeAnInstallBroken() {

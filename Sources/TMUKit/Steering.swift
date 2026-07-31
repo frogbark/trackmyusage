@@ -62,7 +62,7 @@ public struct SteeringAdvice: Sendable, Equatable {
 public enum Steering {
 
     public struct Thresholds: Sendable {
-        /// Warn from here up. Shared with the wallpaper and the notifications, so all three
+        /// Warn from here up. Shared with the widget and the notifications, so all three
         /// agree about what "approaching" means.
         public var approaching: Double = TMUDesign.Thresholds.warn
         /// Nothing left.

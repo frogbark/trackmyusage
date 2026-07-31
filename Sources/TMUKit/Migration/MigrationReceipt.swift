@@ -4,7 +4,7 @@ import Foundation
 ///
 /// The receipt is an optimisation, never the authority. Every step re-checks its own
 /// precondition regardless, so a receipt that is lost, truncated or written by a version
-/// that knew about fewer steps still converges — the same stance `WallpaperState.load`
+/// that knew about fewer steps still converges — the same stance `SnapshotCache.load`
 /// takes when its file is corrupt.
 public struct MigrationReceipt: Codable, Equatable, Sendable {
 
