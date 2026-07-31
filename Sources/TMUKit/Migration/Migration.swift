@@ -61,6 +61,7 @@ public enum Migration {
             files: files,
             keychain: KeychainRelabeler(),
             launchctl: SystemLaunchctl(),
+            desktop: AppKitDesktopRestorer(),
             legacyKeychainService: legacyKeychainService,
             newKeychainService: newKeychainService
         ).run(MigrationPlan.probe(environment))

@@ -25,11 +25,6 @@ public struct MigrationPlan: Equatable, Sendable {
         let caches = LegacyPaths.caches(home: env.home)
         if env.exists(caches.old) && !env.exists(caches.new) {
             steps.append(.caches)
-            // Only worth scrubbing if there is a state file to scrub. It moves with the
-            // directory, so this is conditional on the move, not independent of it.
-            if env.exists(caches.old.appendingPathComponent("wallpaper/state.json")) {
-                steps.append(.wallpaperState)
-            }
         }
 
         let logs = LegacyPaths.logs(home: env.home)
@@ -49,6 +44,24 @@ public struct MigrationPlan: Equatable, Sendable {
             steps.append(.agents)
         }
 
+        // Last, and after `.ownedFiles`, which is what moves original-wallpaper.txt into the
+        // new support directory. The step reads both locations anyway, but running it in this
+        // order means the common case reads the file where it now belongs.
+        //
+        // The condition is deliberately broad: any trace at all. A half-removed install — the
+        // plist gone but the desktop still showing a render, or the reverse — is exactly the
+        // state that needs finishing, and a narrower condition would skip it.
+        let wallpaperTraces =
+            LegacyPaths.wallpaperAgentLabels.map {
+                LegacyPaths.launchAgentsDirectory(home: env.home)
+                    .appendingPathComponent("\($0).plist")
+            }
+            + LegacyPaths.recordedOriginalWallpaper(home: env.home)
+            + LegacyPaths.renderedWallpaperDirectories(home: env.home)
+        if wallpaperTraces.contains(where: env.exists) {
+            steps.append(.wallpaperTeardown)
+        }
+
         return MigrationPlan(steps: steps)
     }
 
@@ -62,7 +75,7 @@ public struct MigrationPlan: Equatable, Sendable {
         // step that moves the directory itself is not, and none may exist.
         steps.contains { step in
             switch step {
-            case .keychain, .caches, .wallpaperState, .logs, .agents:
+            case .keychain, .caches, .wallpaperTeardown, .logs, .agents:
                 return false
             case .ownedFiles:
                 return false  // named files only — see LegacyPaths.ownedFilesInInstanceSupport
@@ -76,8 +89,12 @@ public enum MigrationStep: String, Codable, CaseIterable, Sendable {
     case keychain
     /// `~/Library/Caches/Claudruple` → `.../TrackMyUsage`.
     case caches
-    /// Null any remembered wallpaper that points at one of our own renders.
-    case wallpaperState
+    /// Stop the wallpaper agent, put the desktop back, and delete the renders.
+    ///
+    /// Not a rename step. It exists because removing the wallpaper *feature* is not the same
+    /// as removing it from a machine that already has it — see the comment on the runner's
+    /// implementation.
+    case wallpaperTeardown
     /// Files we own that live beside instance profiles.
     case ownedFiles
     /// `~/Library/Logs/Claudruple` → `.../TrackMyUsage`. Before `agents`.

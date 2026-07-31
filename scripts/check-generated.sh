@@ -7,19 +7,26 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# web/og.png is deliberately not compared.
+# The PNGs are deliberately not compared.
 #
-# It is the one generated file that is a raster, and rasterising is the only step that
-# depends on the platform: the same SVG encodes to 49099 bytes on one Mac and 49102 on
-# another, because CoreGraphics and the installed fonts are not part of this repository.
-# It is reproducible on a single machine and was verified so, which is precisely the check
-# that cannot detect this — and diffing it here would fail every build run somewhere other
-# than wherever it was last committed from, for a reason no commit could fix.
+# They are the generated files that are rasters, and rasterising is the only step that depends
+# on the platform: the same view encodes to a slightly different byte count on another Mac,
+# because CoreGraphics and the installed fonts are not part of this repository. Diffing them
+# here would fail every build run somewhere other than wherever they were last committed from,
+# for a reason no commit could fix.
 #
-# Nothing goes unnoticed as a result. og.png is rendered from the same DemoSnapshots as the
-# SVGs, and those are pure text and are compared, so a layout change still fails this check
-# — and whoever reruns generate-web.sh to fix it rewrites og.png in the same command.
-GENERATED_SCOPE=(web/ ':(exclude)web/og.png')
+# Nothing goes unnoticed as a result, and this is the load-bearing part. web/widgets.json holds
+# the view models those images are drawn from — every family of every demo case, as text — and
+# it *is* compared. A layout change alters the model before it alters a pixel, so a regression
+# still fails this check, and whoever reruns generate-web.sh to fix it rewrites the PNGs in the
+# same command.
+#
+# That file is the successor to the wallpaper SVGs, which did this job when the renderer emitted
+# text. It only works because CanonicalJSON sorts its keys: a plain JSONEncoder orders them by a
+# per-process hash seed, so the file would differ between the machine that committed it and the
+# runner that regenerates it — and the natural response to that would be to exclude it here,
+# which would quietly delete the guarantee this whole comment is about.
+GENERATED_SCOPE=(web/ ':(exclude)web/*.png')
 
 ./scripts/generate-web.sh >/dev/null
 if ! git diff --quiet -- "${GENERATED_SCOPE[@]}"; then

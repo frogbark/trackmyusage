@@ -41,7 +41,7 @@ final class MigrationPlanTests: XCTestCase {
 
         XCTAssertEqual(
             plan.steps,
-            [.keychain, .caches, .wallpaperState, .logs, .ownedFiles, .agents])
+            [.keychain, .caches, .logs, .ownedFiles, .agents, .wallpaperTeardown])
     }
 
     /// Logs must move before the agents are re-bootstrapped: the new plists name log paths
@@ -87,7 +87,7 @@ final class MigrationPlanTests: XCTestCase {
             it signs each account out with every extension gone, silently.
             """)
         XCTAssertEqual(
-            plan.steps, [.ownedFiles],
+            plan.steps, [.ownedFiles, .wallpaperTeardown],
             "Only the named files we own may be taken out of that directory.")
     }
 
@@ -146,11 +146,14 @@ final class MigrationRunnerTests: XCTestCase {
     /// binary does not exist under its new name, and rewriting the plist would replace a
     /// working agent with one that fails on every launch.
     func testAgentsWaitForTheBinaryToExist() {
+        // The link agent, because the wallpaper agent is no longer renamed — it is removed
+        // by .wallpaperTeardown, and renaming one on its way out would bootstrap a fresh
+        // copy pointing at a binary this release deleted.
         let files = FakeFiles(present: [
-            "/Users/example/Library/LaunchAgents/com.claudruple.wallpaper.plist"
+            "/Users/example/Library/LaunchAgents/com.claudruple.link.plist"
         ])
-        files.contents["/Users/example/Library/LaunchAgents/com.claudruple.wallpaper.plist"] =
-            Data(Self.wallpaperPlist.utf8)
+        files.contents["/Users/example/Library/LaunchAgents/com.claudruple.link.plist"] =
+            Data(Self.linkPlist.utf8)
         let launchctl = FakeLaunchctl()
         let receipt = runner(files: files, launchctl: launchctl).run(
             MigrationPlan(steps: [.agents]))
@@ -164,20 +167,20 @@ final class MigrationRunnerTests: XCTestCase {
 
     func testAgentsAreBootedOutBeforeTheNewOneIsBootstrapped() {
         let files = FakeFiles(present: [
-            "/Users/example/Library/LaunchAgents/com.claudruple.wallpaper.plist",
-            "/Users/example/.local/bin/tmud",
+            "/Users/example/Library/LaunchAgents/com.claudruple.link.plist",
+            "/Applications/Claudruple/TrackMyUsage Link.app/Contents/MacOS/TrackMyUsage Link",
         ])
-        files.contents["/Users/example/Library/LaunchAgents/com.claudruple.wallpaper.plist"] =
-            Data(Self.wallpaperPlist.utf8)
+        files.contents["/Users/example/Library/LaunchAgents/com.claudruple.link.plist"] =
+            Data(Self.linkPlist.utf8)
         let launchctl = FakeLaunchctl()
         _ = runner(files: files, launchctl: launchctl).run(MigrationPlan(steps: [.agents]))
 
         XCTAssertEqual(
             launchctl.calls,
             [
-                "bootout com.claudruple.wallpaper",
-                "bootstrap com.trackmyusage.wallpaper.plist",
-                "enable com.trackmyusage.wallpaper",
+                "bootout com.claudruple.link",
+                "bootstrap com.trackmyusage.link.plist",
+                "enable com.trackmyusage.link",
             ],
             """
             Bootstrapping before booting out leaves two wallpaper agents racing for the \
@@ -207,57 +210,170 @@ final class MigrationRunnerTests: XCTestCase {
             "/Users/example/.local/bin/tmud")
     }
 
-    // MARK: - Wallpaper state
+    // MARK: - Wallpaper teardown
 
-    /// `WallpaperOrigin` refuses to composite onto anything in the *current* output
-    /// directory. A pristine recorded before that guard points into the old one, which the
-    /// new guard does not recognise as ours — so the daemon composites the overlay onto a
-    /// previous overlay, darkening a little every five minutes, reporting nothing.
-    func testASelfReferentialWallpaperIsForgotten() throws {
-        let state = "/Users/example/Library/Caches/TrackMyUsage/wallpaper/state.json"
-        let files = FakeFiles(present: [state])
-        files.contents[state] = Data(
-            """
-            {"displays":{
-              "screen-1":{"lastOutput":"a.png",
-                          "pristine":"file:///Users/example/Library/Caches/Claudruple/wallpaper/desktop-a.png"},
-              "screen-2":{"lastOutput":"b.png",
-                          "pristine":"file:///System/Library/CoreServices/DefaultDesktop.heic"}
-            }}
-            """.utf8)
+    /// The whole reason this step exists. An install that ran the wallpaper agent has a
+    /// LaunchAgent on a 300s timer invoking a `tmud` that this release deleted, and a rendered
+    /// PNG set as its desktop. Removing the feature without removing its footprint leaves a
+    /// timer failing silently forever and a background macOS keeps no history of.
+    func testTeardownStopsTheAgentRestoresTheDesktopAndDeletesTheRenders() throws {
+        let record = "Library/Application Support/TrackMyUsage/original-wallpaper.txt"
+        let original = "/Users/example/Pictures/mountain.heic"
+        let files = FakeFiles(
+            present: abs(
+                "Library/LaunchAgents/com.trackmyusage.wallpaper.plist", record,
+                "Library/Caches/TrackMyUsage/wallpaper") + [original])
+        files.contents[home.appendingPathComponent(record).path] = Data(original.utf8)
 
-        let receipt = runner(files: files).run(MigrationPlan(steps: [.wallpaperState]))
-        XCTAssertEqual(receipt.outcome(for: .wallpaperState), .done)
+        let launchctl = FakeLaunchctl()
+        let desktop = FakeDesktop()
+        let receipt = runner(files: files, launchctl: launchctl, desktop: desktop)
+            .run(MigrationPlan(steps: [.wallpaperTeardown]))
 
-        let written = try XCTUnwrap(files.contents[state])
-        let root = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: written) as? [String: Any])
-        let displays = try XCTUnwrap(root["displays"] as? [String: Any])
-        let one = try XCTUnwrap(displays["screen-1"] as? [String: Any])
-        let two = try XCTUnwrap(displays["screen-2"] as? [String: Any])
-
-        XCTAssertNil(one["pristine"], "Our own render must not be remembered as the original.")
-        XCTAssertNotNil(two["pristine"], "A real wallpaper must survive untouched.")
+        XCTAssertEqual(receipt.outcome(for: .wallpaperTeardown), .done)
+        XCTAssertTrue(launchctl.calls.contains("bootout com.trackmyusage.wallpaper"))
+        XCTAssertEqual(desktop.set.map(\.path), [original])
+        XCTAssertFalse(
+            files.exists(home.appendingPathComponent("Library/Caches/TrackMyUsage/wallpaper")))
     }
 
-    func testAWallpaperStateInAnUnexpectedShapeIsLeftAlone() {
-        let state = "/Users/example/Library/Caches/TrackMyUsage/wallpaper/state.json"
-        let files = FakeFiles(present: [state])
-        files.contents[state] = Data("not json".utf8)
+    /// Both labels, because an install may have been renamed before the feature was dropped
+    /// or may still be on the old one. Missing either leaves a live timer behind.
+    func testTeardownStopsBothTheOldAndNewAgentLabels() {
+        let files = FakeFiles(
+            present: abs(
+                "Library/LaunchAgents/com.claudruple.wallpaper.plist",
+                "Library/LaunchAgents/com.trackmyusage.wallpaper.plist"))
+        let launchctl = FakeLaunchctl()
+        _ = runner(files: files, launchctl: launchctl)
+            .run(MigrationPlan(steps: [.wallpaperTeardown]))
 
-        let receipt = runner(files: files).run(MigrationPlan(steps: [.wallpaperState]))
-        // Skipped rather than failed: an unreadable state file is not a migration problem,
-        // and WallpaperState.load already treats corruption as empty.
-        XCTAssertFalse(receipt.outcome(for: .wallpaperState)?.isFailure ?? true)
+        XCTAssertTrue(launchctl.calls.contains("bootout com.claudruple.wallpaper"))
+        XCTAssertTrue(launchctl.calls.contains("bootout com.trackmyusage.wallpaper"))
+    }
+
+    /// Order is load-bearing: restoring reads the recorded path, and deleting the renders
+    /// first would remove the file being restored from in the case where someone's chosen
+    /// wallpaper had itself been stored under our cache directory.
+    func testTeardownRestoresBeforeDeletingTheRenders() throws {
+        let record = "Library/Application Support/TrackMyUsage/original-wallpaper.txt"
+        let original = "/Users/example/Pictures/leaf.jpg"
+        let files = FakeFiles(
+            present: abs(record, "Library/Caches/TrackMyUsage/wallpaper") + [original])
+        files.contents[home.appendingPathComponent(record).path] = Data(original.utf8)
+
+        let desktop = FakeDesktop()
+        _ = runner(files: files, desktop: desktop).run(MigrationPlan(steps: [.wallpaperTeardown]))
+
+        XCTAssertEqual(desktop.set.count, 1, "the desktop must be restored")
+        XCTAssertFalse(
+            files.exists(home.appendingPathComponent("Library/Caches/TrackMyUsage/wallpaper")))
+    }
+
+    /// A person who deleted their old wallpaper is not a migration that went wrong. Failing
+    /// here would leave the receipt incomplete and re-run every other step on every launch.
+    func testARecordedOriginalThatNoLongerExistsIsReportedRatherThanFailing() {
+        let record = "Library/Application Support/TrackMyUsage/original-wallpaper.txt"
+        let files = FakeFiles(present: abs(record))
+        files.contents[home.appendingPathComponent(record).path] =
+            Data("/Users/example/Pictures/deleted.jpg".utf8)
+
+        let desktop = FakeDesktop()
+        let receipt = runner(files: files, desktop: desktop)
+            .run(MigrationPlan(steps: [.wallpaperTeardown]))
+
+        XCTAssertFalse(receipt.outcome(for: .wallpaperTeardown)?.isFailure ?? true)
+        XCTAssertTrue(desktop.set.isEmpty, "nothing to restore, so nothing is set")
+    }
+
+    /// The record is checked in both support directories because `.ownedFiles` moves it, and
+    /// teardown has to work whether or not that step has already run.
+    func testTheRecordIsFoundInThePreRenameSupportDirectoryToo() {
+        let record = "Library/Application Support/Claudruple/original-wallpaper.txt"
+        let original = "/Users/example/Pictures/old.jpg"
+        let files = FakeFiles(present: abs(record) + [original])
+        files.contents[home.appendingPathComponent(record).path] = Data(original.utf8)
+
+        let desktop = FakeDesktop()
+        _ = runner(files: files, desktop: desktop).run(MigrationPlan(steps: [.wallpaperTeardown]))
+
+        XCTAssertEqual(desktop.set.map(\.path), [original])
+    }
+
+    /// The state a real machine was actually in, which no fixture covered: the agent running,
+    /// the renders present, and *no* recorded original — install-wallpaper-agent.sh only
+    /// writes one when it successfully captured a pre-existing wallpaper.
+    ///
+    /// The desktop is displaying one of those renders right now. Deleting it would leave macOS
+    /// rendering a background whose source is gone, with no way back and nothing on screen
+    /// explaining why. A stale render is recoverable; a deleted one is not.
+    func testRendersAreKeptWhenTheDesktopCouldNotBeMovedOffThem() throws {
+        let renders = "Library/Caches/TrackMyUsage/wallpaper"
+        let files = FakeFiles(
+            present: abs("Library/LaunchAgents/com.trackmyusage.wallpaper.plist", renders))
+
+        let desktop = FakeDesktop()
+        let receipt = runner(files: files, desktop: desktop)
+            .run(MigrationPlan(steps: [.wallpaperTeardown]))
+
+        XCTAssertTrue(desktop.set.isEmpty, "nothing was recorded, so nothing could be restored")
+        XCTAssertTrue(
+            files.exists(home.appendingPathComponent(renders)),
+            "the file the desktop is showing must not be deleted")
+        XCTAssertFalse(receipt.outcome(for: .wallpaperTeardown)?.isFailure ?? true)
+    }
+
+    /// And the converse: once the desktop really has been moved to the user's own wallpaper,
+    /// the renders are just litter and do get removed.
+    func testRendersAreRemovedOnceTheDesktopHasBeenMovedOffThem() throws {
+        let record = "Library/Application Support/TrackMyUsage/original-wallpaper.txt"
+        let renders = "Library/Caches/TrackMyUsage/wallpaper"
+        let original = "/Users/example/Pictures/dunes.heic"
+        let files = FakeFiles(present: abs(record, renders) + [original])
+        files.contents[home.appendingPathComponent(record).path] = Data(original.utf8)
+
+        let desktop = FakeDesktop()
+        _ = runner(files: files, desktop: desktop).run(MigrationPlan(steps: [.wallpaperTeardown]))
+
+        XCTAssertEqual(desktop.set.map(\.path), [original])
+        XCTAssertFalse(files.exists(home.appendingPathComponent(renders)))
+    }
+
+    /// Idempotent: a second run on a clean machine must skip, not fail. The receipt only marks
+    /// complete when every step is non-failing, so a step that failed on nothing would re-run
+    /// the whole migration on every launch forever.
+    func testTeardownOnAMachineWithNoWallpaperInstallSkips() {
+        let receipt = runner(files: FakeFiles(present: []))
+            .run(MigrationPlan(steps: [.wallpaperTeardown]))
+
+        XCTAssertEqual(
+            receipt.outcome(for: .wallpaperTeardown), .skipped("no wallpaper install to remove"))
+    }
+
+    /// The wallpaper agent must not be in the rename list. Renaming it would bootstrap a fresh
+    /// copy on a 300s timer pointing at a deleted binary — the removal causing exactly the
+    /// damage it exists to prevent.
+    func testTheWallpaperAgentIsNotRenamedAlongsideTheBroker() {
+        XCTAssertFalse(
+            LegacyPaths.agents.contains { $0.oldLabel.contains("wallpaper") },
+            "the wallpaper agent is removed, not renamed")
     }
 
     // MARK: - Helpers
 
-    private func runner(files: FakeFiles, launchctl: FakeLaunchctl = FakeLaunchctl())
-        -> MigrationRunner
-    {
+    /// FakeFiles keys on absolute paths; the fixtures below are written home-relative.
+    private func abs(_ relative: String...) -> [String] {
+        relative.map { home.appendingPathComponent($0).path }
+    }
+
+    private func runner(
+        files: FakeFiles,
+        launchctl: FakeLaunchctl = FakeLaunchctl(),
+        desktop: FakeDesktop = FakeDesktop()
+    ) -> MigrationRunner {
         MigrationRunner(
             home: home, files: files, keychain: FakeKeychain(), launchctl: launchctl,
+            desktop: desktop,
             legacyKeychainService: "com.claudruple.usage",
             newKeychainService: "com.trackmyusage.usage")
     }
@@ -324,6 +440,11 @@ final class FakeLaunchctl: LaunchctlRunning, @unchecked Sendable {
     func bootout(label: String) throws { calls.append("bootout \(label)") }
     func bootstrap(plist: URL) throws { calls.append("bootstrap \(plist.lastPathComponent)") }
     func enable(label: String) throws { calls.append("enable \(label)") }
+}
+
+final class FakeDesktop: DesktopRestoring, @unchecked Sendable {
+    private(set) var set: [URL] = []
+    func setDesktopImage(_ url: URL) throws { set.append(url) }
 }
 
 struct FakeKeychain: KeychainRelabeling {

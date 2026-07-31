@@ -31,11 +31,19 @@ public struct Hex: Sendable, Equatable {
 /// `.accentColor`/`.orange`/`.red` in the menu bar, and nothing at all on the website. Three
 /// surfaces showing the same reading in three different greens is not a style problem — it
 /// makes them look like different readings.
+///
+/// The widget draws its *state* colours from here and its text colour from SwiftUI's
+/// semantic `.primary`/`.secondary`. `Ink.primary` is near-white, which is correct on the
+/// wallpaper's dark scrim and invisible on a light-mode widget — so the palette kept the
+/// meaning and the system took over contrast.
 public enum Ink {
 
     // MARK: - Surfaces
 
-    /// Wallpaper panels, drawn at 35–78% depending on how much attention is warranted.
+    /// Deep background, behind a panel that has to sit on an arbitrary image.
+    ///
+    /// Unused by the widget, which gets its background from the widget host's material.
+    /// Kept because the website images and the social preview still composite onto it.
     public static let scrim = Hex("#0c1216")
     /// App window background.
     public static let window = Hex("#1e2429")
@@ -60,7 +68,7 @@ public enum Ink {
     // MARK: - Furniture
 
     /// Bar tracks and hairlines, always drawn at low opacity rather than as a pale colour,
-    /// so they sit correctly on any background the wallpaper happens to have.
+    /// so they sit correctly on whatever material a widget is placed over.
     public static let track = Hex("#ffffff")
     /// Buttons and toggles.
     public static let action = Hex("#3f6df0")
@@ -68,9 +76,14 @@ public enum Ink {
 
 /// Where a reading sits relative to its limit.
 ///
-/// The raw values are load-bearing: the wallpaper emits them as CSS classes
-/// (`<g class="row warn">`) and the renderer's tests assert on those strings. They are
-/// pinned by a test for that reason.
+/// The raw values are load-bearing, and still are — but for a different reason than they
+/// were. The wallpaper emitted them as SVG CSS classes (`<g class="row warn">`) and the
+/// renderer's tests asserted on those strings. There is no SVG any more.
+///
+/// What replaced it is `web/widgets.json`, the serialised view models that `check-generated.sh`
+/// byte-compares. These strings are keys in that file, so renaming a case still changes a
+/// committed artifact and still fails CI. The constraint survived the renderer; only its
+/// justification changed. They stay pinned by a test.
 public enum UsageState: String, Codable, Sendable, Equatable, CaseIterable {
     case ok
     case warn

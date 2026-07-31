@@ -3,9 +3,9 @@ import Foundation
 /// Whether a reading is old enough to say so, and how to say it.
 ///
 /// The `?` suffix is produced in exactly one function in this project. Four surfaces show
-/// these numbers — the wallpaper, the menu bar pill, the popover and the instances window —
-/// and the only structural way to stop them disagreeing about what counts as stale is to
-/// give them one implementation rather than one convention.
+/// these numbers — the widget, the menu bar pill, the popover and the instances window — and
+/// the only structural way to stop them disagreeing about what counts as stale is to give
+/// them one implementation rather than one convention.
 public enum Freshness {
 
     public static func isStale(age: TimeInterval) -> Bool {
@@ -18,10 +18,13 @@ public enum Freshness {
 
     /// Mark a displayed value as stale.
     ///
-    /// A suffix rather than a colour change alone, because the wallpaper is read at a
-    /// glance and from across a room, where a slightly duller green is not a signal. The
-    /// muting is applied too — see `UsageState.ink` and the layouts — but the `?` is what
-    /// actually carries.
+    /// A suffix rather than a colour change alone, because these surfaces are read at a
+    /// glance, where a slightly duller green is not a signal. The muting is applied too —
+    /// see `UsageState.ink` and the views — but the `?` is what actually carries.
+    ///
+    /// It is also what a frozen widget relies on: the timeline precomputes an entry holding
+    /// these numbers already marked, so a widget whose publisher stopped says so on the
+    /// system's clock without anything waking to tell it.
     public static func mark(_ text: String, stale: Bool) -> String {
         stale ? text + "?" : text
     }

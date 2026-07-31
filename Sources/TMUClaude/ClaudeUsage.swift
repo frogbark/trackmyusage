@@ -51,7 +51,7 @@ public enum ClaudeUsage {
         }
 
         // Sorted because a dictionary is not ordered and everything downstream — the
-        // rendered wallpaper especially — must be stable between runs. A gauge whose rows
+        // rendered widget especially — must be stable between runs. A gauge whose rows
         // reshuffle on each sample cannot be read at a glance, and golden-file tests over
         // unordered output are flaky rather than useful.
         let metrics = latest.metrics

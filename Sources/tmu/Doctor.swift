@@ -1,6 +1,8 @@
 import Foundation
+import TMUDesign
 import TMUKit
 import TMUProviders
+import TMUWidgets
 
 /// `tmu doctor` — gather the facts, hand them to `Diagnostics`, print what came back.
 ///
@@ -94,8 +96,39 @@ enum Doctor {
                 atPath: "/Applications/TrackMyUsage Link.app"),
             brokerAgentLoaded: agentLoaded("com.trackmyusage.link"),
             brokerRunning: processRunning("TrackMyUsage Link.app/Contents/MacOS"),
-            wallpaperAgentLoaded: agentLoaded("com.trackmyusage.wallpaper"),
+            widget: widgetState(),
             keychainReachable: keychainReachable(home: home))
+    }
+
+    /// Which of the four widget states this install is in.
+    ///
+    /// The order of the checks is the point. "Is the app ad-hoc signed" is asked *before*
+    /// "is the extension missing", because an ad-hoc build is missing its extension by
+    /// design — asking the questions the other way round reports a supported configuration
+    /// as a broken install.
+    private static func widgetState() -> WidgetInstallState {
+        let appex = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/PlugIns/TMUWidgetExtension.appex")
+
+        guard FileManager.default.fileExists(atPath: appex.path) else {
+            return hasAppGroup() ? .missing : .unsignedBuild
+        }
+
+        // Installed. Whether it shows anything current is a separate question, answered by the
+        // age of what the app last published.
+        guard let model = SharedContainer.modelURL(),
+            let attributes = try? FileManager.default.attributesOfItem(atPath: model.path),
+            let modified = attributes[.modificationDate] as? Date,
+            !Freshness.isStale(observedAt: modified, now: Date())
+        else { return .frozen }
+
+        return .ok
+    }
+
+    /// Whether this build carries an App Group at all — the thing an ad-hoc signature cannot
+    /// have, and without which there is nothing for a widget to read.
+    private static func hasAppGroup() -> Bool {
+        SharedContainer.groupIdentifier() != nil
     }
 
     /// Whether the signature verifies. Nil when the check itself could not run, which is a

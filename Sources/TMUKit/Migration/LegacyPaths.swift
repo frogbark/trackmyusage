@@ -49,10 +49,43 @@ public enum LegacyPaths {
 
     // MARK: - Launch agents
 
+    /// Agents that get renamed and keep running.
+    ///
+    /// The wallpaper agent is deliberately not here any more. Renaming an agent that is about
+    /// to be deleted would bootstrap a fresh copy of it, on a 300s timer, pointing at a `tmud`
+    /// that no longer exists — the feature removal doing the exact damage it exists to
+    /// prevent. It is in `wallpaperAgentLabels` instead, which is a removal list.
     public static let agents = [
-        Agent(oldLabel: "com.claudruple.link", newLabel: "com.trackmyusage.link"),
-        Agent(oldLabel: "com.claudruple.wallpaper", newLabel: "com.trackmyusage.wallpaper"),
+        Agent(oldLabel: "com.claudruple.link", newLabel: "com.trackmyusage.link")
     ]
+
+    /// Agents that get removed, under every label they have ever had.
+    ///
+    /// Both, because an install may have been migrated to the new label before the wallpaper
+    /// feature was dropped, or may still be on the old one. Booting out a label that is not
+    /// loaded is not an error, so trying both is free and missing one leaves a timer firing
+    /// every five minutes at a binary that is gone.
+    public static let wallpaperAgentLabels = [
+        "com.claudruple.wallpaper",
+        "com.trackmyusage.wallpaper",
+    ]
+
+    /// Where the wallpaper agent recorded the background it replaced.
+    ///
+    /// Checked in both the pre- and post-rename support directories: `.ownedFiles` moves it,
+    /// and teardown must work whether or not that step has already run.
+    public static func recordedOriginalWallpaper(home: URL) -> [URL] {
+        [
+            supportDirectory(home: home),
+            instanceSupportDirectory(home: home),
+        ].map { $0.appendingPathComponent("original-wallpaper.txt") }
+    }
+
+    /// The rendered wallpapers themselves, under both cache roots.
+    public static func renderedWallpaperDirectories(home: URL) -> [URL] {
+        let caches = self.caches(home: home)
+        return [caches.new, caches.old].map { $0.appendingPathComponent("wallpaper") }
+    }
 
     public static func launchAgentsDirectory(home: URL) -> URL {
         home.appendingPathComponent("Library/LaunchAgents")

@@ -50,7 +50,7 @@ public struct RenderHistory: Codable, Equatable, Sendable {
     // MARK: - Persistence
 
     /// Never throws. A cache that cannot be read is an empty cache; the sparklines come back
-    /// within an hour and nothing else depends on it. Same stance `WallpaperState.load`
+    /// within an hour and nothing else depends on it. Same stance `SnapshotCache.load`
     /// takes toward a corrupt file.
     public static func load(from url: URL) -> RenderHistory {
         guard let data = try? Data(contentsOf: url),

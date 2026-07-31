@@ -3,10 +3,10 @@ import TMUProviders
 
 /// Turning numbers into the strings people read.
 ///
-/// Locale-free on purpose. These strings go into an SVG that is rasterised and compared in
-/// tests, and a machine set to a comma-decimal locale would otherwise render a different
-/// wallpaper and fail a test for reasons that have nothing to do with the change under
-/// review. `NumberFormatter` is the usual answer and is exactly the wrong one here.
+/// Locale-free on purpose. These strings are compared byte for byte in `web/widgets.json`,
+/// and a machine set to a comma-decimal locale would otherwise produce a different file and
+/// fail CI for reasons that have nothing to do with the change under review.
+/// `NumberFormatter` is the usual answer and is exactly the wrong one here.
 public enum Format {
 
     /// A number for an SVG attribute: integral where possible, two decimals otherwise.
@@ -41,12 +41,12 @@ public enum Format {
 
     /// `HH:mm`, in the zone it is given.
     ///
-    /// The zone is a parameter rather than `TimeZone.current` read here. Reading it made the
-    /// renderer a function of its inputs *and* the machine: the same instant drew 20:33 on a
-    /// laptop and 03:33 on a UTC runner, which is how the committed wallpaper images came to
-    /// disagree with the ones CI regenerated. `generate-web.sh` pinned `TZ=UTC` to paper over
-    /// it, and an environment variable in a shell script is a strange place to keep a
-    /// property the project states as an invariant.
+    /// The zone is a parameter rather than `TimeZone.current` read here. Reading it made
+    /// rendering a function of its inputs *and* the machine: the same instant drew 20:33 on a
+    /// laptop and 03:33 on a UTC runner, which is how the committed images came to disagree
+    /// with the ones CI regenerated. `generate-web.sh` pinned `TZ=UTC` to paper over it, and
+    /// an environment variable in a shell script is a strange place to keep a property the
+    /// project states as an invariant.
     public static func time(_ date: Date, in zone: TimeZone) -> String {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
@@ -54,7 +54,7 @@ public enum Format {
         return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
     }
 
-    /// "3d", "11d", "today" — how a renewal reads on the wallpaper's renewal line.
+    /// "3d", "11d", "today" — how a renewal reads on the large widget's renewal line.
     public static func daysAway(_ days: Int) -> String {
         days <= 0 ? "today" : "\(days)d"
     }

@@ -22,7 +22,7 @@ public enum InstanceFreshness: Equatable, Sendable {
 
     /// One of the two versions could not be read.
     ///
-    /// Its own case rather than folded into `current`, on the same principle the wallpaper
+    /// Its own case rather than folded into `current`, on the same principle every surface
     /// draws "no data" instead of zero: a missing reading is not a passing one, and a clone
     /// reported as up to date on the strength of a version nobody could read is worse than
     /// one honestly marked unknown.

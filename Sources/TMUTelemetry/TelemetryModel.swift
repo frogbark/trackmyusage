@@ -4,11 +4,14 @@ import TMUProviders
 
 /// Everything the surfaces draw, decided once.
 ///
-/// The wallpaper, the menu bar pill, the popover and the instances window all render *this*
+/// The widget, the menu bar pill, the popover and the instances window all render *this*
 /// value rather than each deriving their own rows from raw snapshots. That is the only
-/// structural guarantee that they agree: previously the wallpaper built rows in a private
-/// function inside the renderer while the menu bar built different rows from a different
+/// structural guarantee that they agree: the wallpaper this replaced built rows in a private
+/// function inside its renderer while the menu bar built different rows from a different
 /// source, and nothing stopped them disagreeing about what "62%" meant.
+///
+/// It is also the wire format between the app and the widget. The app writes this to the App
+/// Group container and the sandboxed extension reads it — see `WidgetPublisher`.
 ///
 /// `Codable` because it is also the golden-file format for tests. Snapshotting this catches
 /// every content regression — a wrong row, a lost order, a missing `?`, a misclassified
@@ -22,10 +25,10 @@ public struct TelemetryModel: Codable, Equatable, Sendable {
     public let generatedAt: Date
     /// The zone `generatedAt` is drawn in.
     ///
-    /// Part of the model because the clock on the wallpaper is content, and content belongs
-    /// to the thing every surface renders rather than to whichever process happens to draw
-    /// it. Carrying it here is what lets the demo renders be reproducible by construction
-    /// instead of by exporting TZ before running the generator.
+    /// Part of the model because the clock on the widget is content, and content belongs to
+    /// the thing every surface renders rather than to whichever process happens to draw it.
+    /// Carrying it here is what lets the demo renders be reproducible by construction instead
+    /// of by exporting TZ before running the generator.
     public let timeZone: TimeZone
 
     /// A Claude Desktop or Claude Code account.
@@ -65,7 +68,7 @@ public struct TelemetryModel: Codable, Equatable, Sendable {
         public let state: UsageState
     }
 
-    /// How loud the wallpaper should be.
+    /// How loud the surface drawing this should be.
     ///
     /// Derived from the readings, never chosen. Exposing it as a setting produces a
     /// permanently-alert desktop, which is the same as no signal at all — the quiet state
@@ -78,15 +81,15 @@ public struct TelemetryModel: Codable, Equatable, Sendable {
     /// Providers whose snapshots are treated as accounts rather than services.
     static let accountProviders: Set<String> = ["claude", "claude-code"]
 
-    /// How far ahead a renewal is worth mentioning. The compact card draws a 30-day axis.
+    /// How far ahead a renewal is worth mentioning. The large widget lists what is inside it.
     static let renewalHorizon: TimeInterval = 30 * 24 * 3600
 
     // MARK: - Building
 
     /// The single point where raw snapshots become something drawable.
     ///
-    /// This replaced `WallpaperSVG.row(for:)`, which was private to the renderer and threw
-    /// away everything except name, utilisation, display and state — so `resetsAt`, `unit`,
+    /// This replaced a row-builder private to the wallpaper renderer, which threw away
+    /// everything except name, utilisation, display and state — so `resetsAt`, `unit`,
     /// staleness and every non-binding metric were collected by the adapters and silently
     /// discarded one function before they could be used.
     public static func build(
@@ -172,8 +175,8 @@ private struct Reading {
 
     init(_ snapshot: UsageSnapshot, now: Date) {
         // `account ?? provider`: several accounts of one provider is the situation this
-        // project exists to manage, and labelling every one of them "claude" makes the
-        // wallpaper useless for exactly its main case.
+        // project exists to manage, and labelling every one of them "claude" makes every
+        // surface useless for exactly its main case.
         self.name = snapshot.account ?? snapshot.provider
         self.isStale = Freshness.isStale(age: snapshot.age(at: now))
 

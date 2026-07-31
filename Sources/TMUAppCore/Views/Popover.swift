@@ -1,6 +1,7 @@
 import SwiftUI
 import TMUDesign
 import TMUTelemetry
+import TMUWidgets
 
 /// 1f/3c — the menu bar panel.
 ///
@@ -60,7 +61,7 @@ public struct Popover: View {
             if !store.model.services.isEmpty {
                 Section(title: "Services", trailing: "nearest limit first") {
                     // Ranked here, at the point of use, rather than in the model. The model's
-                    // order is stable by name so the wallpaper does not reshuffle every five
+                    // order is stable by name so the panel does not reshuffle every five
                     // minutes; this list is short and read top-down, so ranking earns its
                     // keep. Same data, two orders, one source.
                     let ranked = store.model.services.sorted {

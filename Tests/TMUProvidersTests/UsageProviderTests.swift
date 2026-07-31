@@ -61,7 +61,7 @@ final class UsageProviderTests: XCTestCase {
 
     func testTheSnapshotCarriesTheProviderIdentityEvenWhenItFails() async {
         // A failed snapshot still has to occupy its row, or the provider silently vanishes
-        // from the wallpaper and looks like it was never configured.
+        // from the widget and looks like it was never configured.
         let provider = StubProvider(id: "resend", requiresCredential: true)
 
         let snapshot = await provider.snapshot(credentials: InMemoryCredentials(), now: now)

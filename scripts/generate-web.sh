@@ -7,10 +7,14 @@
 # has is exactly the dishonesty the project's whole pitch is against. CI runs this and fails
 # if the result differs from what is committed.
 #
-# The wallpaper images are here for the same reason. They come out of the renderer that
-# draws the real thing, seeded with fixtures and a frozen clock, so the site cannot show a
-# layout the code does not produce — and a layout regression turns up as a diff here before
-# it turns up on anyone's desktop.
+# The widget images are here for the same reason. They come out of the code that draws the
+# real widget, seeded with fixtures and a frozen clock, so the site cannot show a layout the
+# binary does not produce.
+#
+# They are rasters, though, and rasters cannot be byte-compared — see check-generated.sh.
+# web/widgets.json is what carries that guarantee now: the same view models these images
+# draw, as text, diffable. It is the successor to the wallpaper SVGs, which were readable and
+# comparable for exactly the same reason.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -25,14 +29,17 @@ swift build -c release --product tmu >/dev/null
 .build/release/tmu assets mark 96 > web/mark.svg
 .build/release/tmu assets mark 512 > web/icon.svg
 
-for demo in ledger board card-alert card-quiet; do
-    .build/release/tmu assets wallpaper "$demo" > "web/wallpaper-$demo.svg"
+# The text artifact. This is the one that makes a layout regression fail CI.
+.build/release/tmu assets widget-models > web/widgets.json
+
+# Four images, matching the four the wallpaper shipped: every family of the interesting case,
+# plus the calm state, which is what the widget looks like almost all of the time.
+for family in small medium large; do
+    .build/release/tmu assets widget "$family" busy > "web/widget-$family-busy.png"
 done
+.build/release/tmu assets widget medium calm > web/widget-medium-calm.png
 
-# The social preview has to be a raster: the unfurlers do not accept SVG. It is
-# byte-identical run to run on one machine, and not between two — CoreGraphics and the
-# installed fonts decide the encoding, and neither is in this repository. check-generated.sh
-# compares every generated file except this one, and says why.
-.build/release/tmu assets social ledger 1200 630 > web/og.png
+# The social preview, on the canvas the unfurlers crop to.
+.build/release/tmu assets social busy 1200 630 > web/og.png
 
-echo "generated: web/providers.json web/mark.svg web/icon.svg web/wallpaper-*.svg web/og.png"
+echo "generated: web/providers.json web/mark.svg web/icon.svg web/widgets.json web/widget-*.png web/og.png"
