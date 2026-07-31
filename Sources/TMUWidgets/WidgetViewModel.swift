@@ -123,20 +123,28 @@ public struct WidgetViewModel: Codable, Equatable, Sendable {
 
         let headline = mostUrgent(of: everything)
 
-        let candidates: [Row]
+        let selection: (shown: [Row], overflow: Int)
         switch family {
         case .small:
-            candidates = []
+            selection = ([], 0)
         case .medium:
             // The account ledger. Services are a large-widget concern: a medium showing both
             // gets four points of type at 170pt tall and reads as neither.
-            candidates = accounts
+            selection = select(accounts, budget: family.rowBudget)
         case .large:
-            candidates = everything
+            // Accounts first and in full — there are rarely more than a handful, and managing
+            // several accounts of one provider is what this project is for. Services then fill
+            // whatever is left.
+            let forAccounts = min(accounts.count, family.rowBudget)
+            let keptAccounts = select(accounts, budget: forAccounts)
+            let keptServices = select(services, budget: family.rowBudget - forAccounts)
+            selection = (
+                keptAccounts.shown + keptServices.shown,
+                keptAccounts.overflow + keptServices.overflow
+            )
         }
-
-        let shown = Array(candidates.prefix(family.rowBudget))
-        let overflow = candidates.count - shown.count
+        let shown = selection.shown
+        let overflow = selection.overflow
 
         let renewals =
             family == .large
@@ -156,6 +164,29 @@ public struct WidgetViewModel: Codable, Equatable, Sendable {
             asOf: Format.time(model.generatedAt, in: model.timeZone),
             isStale: stale,
             emptyReason: everything.isEmpty ? "no data" : nil)
+    }
+
+    /// Which rows survive truncation, and in what order they are drawn.
+    ///
+    /// Two different questions, answered differently on purpose.
+    ///
+    /// *Which* is decided by urgency. `TelemetryModel` orders by name and says why — a list
+    /// whose rows move cannot be read at a glance — but that reasoning assumes the whole list
+    /// is visible. Applied to a truncation it silently picks an alphabetical six out of
+    /// nineteen, which is how a widget ends up hiding the one reading over its limit behind
+    /// "+13 more" while the small size shows that very reading as its headline.
+    ///
+    /// *Order* then goes back to name, so the rows a reader sees still sit where they sat
+    /// last time. Ranking the visible list as well would reshuffle it on every sample.
+    ///
+    /// Readings with no utilisation sort last: they are not less urgent than 3%, they are not
+    /// on the scale, and something measurable is the better use of a scarce row.
+    private static func select(_ rows: [Row], budget: Int) -> (shown: [Row], overflow: Int) {
+        guard budget > 0 else { return ([], rows.count) }
+        guard rows.count > budget else { return (rows, 0) }
+        let ranked = rows.sorted { ($0.utilization ?? -1) > ($1.utilization ?? -1) }
+        let kept = ranked.prefix(budget).sorted { $0.name < $1.name }
+        return (Array(kept), rows.count - budget)
     }
 
     /// The reading a glance should land on.

@@ -180,6 +180,28 @@ private enum Fixtures {
         return TelemetryModel.build(snapshots: snapshots, now: now, timeZone: .gmt)
     }
 
+    /// Nineteen services whose utilisations run the other way from their names, so that
+    /// name-order truncation and urgency-order truncation cannot both be right.
+    static func spread(at now: Date) -> TelemetryModel {
+        let names = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "zulu"]
+        let snapshots = names.enumerated().map { index, name in
+            service(name: name, utilization: Double(2 + index * 15), observedAt: now)
+        }
+        return TelemetryModel.build(snapshots: snapshots, now: now, timeZone: .gmt)
+    }
+
+    private static func service(name: String, utilization: Double, observedAt: Date)
+        -> UsageSnapshot
+    {
+        UsageSnapshot(
+            provider: name, account: name, observedAt: observedAt, status: .ok,
+            metrics: [
+                Metric(
+                    key: "quota", kind: .percentOfLimit, value: utilization, limit: 100,
+                    window: .calendarMonth, resetsAt: nil, label: "Monthly")
+            ])
+    }
+
     private static func capped(
         account: String, utilization: Double, observedAt: Date, resetsAt: Date?
     ) -> UsageSnapshot {
@@ -206,5 +228,32 @@ private enum Fixtures {
                     key: "requests", kind: .count, value: 1234, limit: nil,
                     window: .none, resetsAt: nil, label: "Requests")
             ])
+    }
+}
+
+// MARK: - Truncation picks the right rows
+
+extension WidgetViewModelTests {
+
+    /// The bug this prevents was visible in a render: nineteen readings truncated to six by
+    /// name, hiding a provider over its limit behind "+13 more" — while the small family
+    /// showed that same reading as its headline. A truncated view that drops the worst row is
+    /// worse than no view, because it looks complete.
+    func testTruncationKeepsTheMostUrgentRowsRatherThanTheAlphabeticallyFirst() {
+        let model = Fixtures.spread(at: now)
+        let vm = WidgetViewModel.make(from: model, family: .large, at: now)
+
+        let shown = Set(vm.rows.map(\.name))
+        XCTAssertTrue(shown.contains("zulu"), "the 104% reading must survive truncation")
+        XCTAssertFalse(shown.contains("alpha"), "a 2% reading must not displace it")
+    }
+
+    /// Chosen by urgency, drawn by name. Ranking the visible list too would reshuffle rows on
+    /// every sample and cost exactly the glanceability the name order exists to protect.
+    func testTheRowsThatSurviveAreStillDrawnInNameOrder() {
+        let model = Fixtures.spread(at: now)
+        let vm = WidgetViewModel.make(from: model, family: .large, at: now)
+
+        XCTAssertEqual(vm.rows.map(\.name), vm.rows.map(\.name).sorted())
     }
 }
