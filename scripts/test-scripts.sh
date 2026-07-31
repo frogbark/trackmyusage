@@ -206,6 +206,65 @@ mkdir -p "$WORK/OnlyA.framework/Versions/A"
 is "a framework with A but no Current still resolves" \
     "$WORK/OnlyA.framework/Versions/A" "$(resolve_framework "$WORK/OnlyA.framework")"
 
+section "widget identity"
+
+# The App Group identifier decides which container the app writes to and the widget reads
+# from. Get it wrong and both sides work perfectly, in different directories, and the widget
+# shows "no data yet" forever with nothing reporting an error anywhere.
+. "$ROOT/scripts/lib/widget-identity.sh"
+
+is "an ad-hoc identity yields no team, so no group" \
+    "" "$(tmu_team_id -)"
+is "and therefore no app group at all" \
+    "" "$(tmu_app_group -)"
+
+is "the team id is read from the identity's parenthesised suffix" \
+    "ABCDE12345" "$(tmu_team_id 'Apple Development: A Person (ABCDE12345)')"
+
+is "the group is the team id joined to the suffix" \
+    "ABCDE12345.com.trackmyusage.shared" \
+    "$(tmu_app_group 'Apple Development: A Person (ABCDE12345)')"
+
+# macOS requires the Team ID prefix outside the Mac App Store. The `group.` form is
+# App-Store-only and silently resolves to nothing here.
+case "$(tmu_app_group 'Apple Development: A Person (ABCDE12345)')" in
+    group.*) is "the group must not use the App Store form" "not group.*" "group.*" ;;
+    *)       pass=$((pass + 1)) ;;
+esac
+
+is "TEAM_ID overrides the certificate" \
+    "OVERRIDE99.com.trackmyusage.shared" \
+    "$(TEAM_ID=OVERRIDE99 tmu_app_group 'Apple Development: A Person (ABCDE12345)')"
+
+# Apple requires an app extension's identifier to be prefixed by its host's. A mismatch
+# registers nothing and reports nothing.
+case "$TMU_WIDGET_BUNDLE_ID" in
+    "$TMU_APP_BUNDLE_ID".*) pass=$((pass + 1)) ;;
+    *) is "extension id is prefixed by the host app id" "$TMU_APP_BUNDLE_ID.*" "$TMU_WIDGET_BUNDLE_ID" ;;
+esac
+
+section "widget plist injection"
+
+# An ad-hoc build must produce a complete app with no widget -- a supported configuration --
+# rather than a half-built one or a failure.
+OUT="$WORK/adhoc" ./scripts/build-app.sh >/dev/null 2>&1
+is "an ad-hoc build produces an app" \
+    "yes" "$([ -d "$WORK/adhoc/TrackMyUsage.app" ] && echo yes || echo no)"
+is "and no widget extension" \
+    "no" "$([ -d "$WORK/adhoc/TrackMyUsage.app/Contents/PlugIns" ] && echo yes || echo no)"
+
+# The heredoc that writes Info.plist has bitten twice: a multi-line ${VAR:+...} emits its own
+# body verbatim when empty, and $(cat <<EOF) cannot contain an apostrophe. Both produce a
+# plist that is wrong rather than a build that fails.
+is "the ad-hoc plist is valid and carries no group key" \
+    "ok" "$(plutil -lint "$WORK/adhoc/TrackMyUsage.app/Contents/Info.plist" >/dev/null 2>&1 \
+            && (/usr/libexec/PlistBuddy -c 'Print :TMUAppGroupIdentifier' \
+                "$WORK/adhoc/TrackMyUsage.app/Contents/Info.plist" >/dev/null 2>&1 \
+                && echo "leaked" || echo ok) || echo "invalid")"
+
+is "and contains no unexpanded shell variable" \
+    "" "$(grep -o '\$GROUP' "$WORK/adhoc/TrackMyUsage.app/Contents/Info.plist" 2>/dev/null | head -1)"
+
 # ---------------------------------------------------------------- Result
 
 printf '\n'

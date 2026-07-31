@@ -67,6 +67,20 @@ jobs:
       - name: Build (release)
         run: swift build -c release
 
+      # `swift build` and `swift test` cannot see the widget: the .appex exists only once
+      # build-app.sh has assembled it, and every way it can be wrong is silent. A missing
+      # Info.plist key registers nothing, logs nothing, and leaves the widget absent from the
+      # picker with no diagnostic anywhere.
+      #
+      # This runner has no signing identity, so the build takes the ad-hoc path and produces
+      # an app with no extension — which is a supported configuration, and what check-widget.sh
+      # asserts here. Every structural check it makes passes without a certificate; only the
+      # live container round-trip needs one, and that is guarded behind IDENTITY.
+      - name: Widget bundle
+        run: |
+          ./scripts/build-app.sh
+          ./scripts/check-widget.sh
+
       - name: Lint
         # `swift format` is a toolchain subcommand as of Swift 6 — nothing to install.
         #
