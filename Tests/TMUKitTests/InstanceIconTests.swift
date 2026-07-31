@@ -5,7 +5,7 @@ import Foundation
 import TMUDesign
 import XCTest
 
-@testable import TMURender
+@testable import TMUKit
 
 /// The badge is what tells two instances apart, so the properties worth pinning are that it
 /// is actually drawn, that it is the same every time, and that it differs per instance.

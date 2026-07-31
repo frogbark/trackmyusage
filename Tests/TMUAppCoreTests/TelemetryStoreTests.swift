@@ -171,26 +171,6 @@ final class TelemetryStoreTests: XCTestCase {
         XCTAssertFalse(SettingsStore.load(from: url).notificationsEnabled)
     }
 
-    /// A newer app writing a layout an older daemon has never heard of must not brick it.
-    func testAnUnknownLayoutFallsBackRatherThanFailingTheWholeFile() {
-        var settings = Settings()
-        settings.layoutByDisplay = ["screen-1": "hologram"]
-        settings.defaultLayout = "card"
-
-        XCTAssertEqual(
-            settings.layout(for: "screen-1", known: ["ledger", "board", "card"]), "card")
-        XCTAssertEqual(
-            settings.layout(for: "screen-2", known: ["ledger", "board", "card"]), "card")
-    }
-
-    func testAPerDisplayChoiceBeatsTheDefault() {
-        var settings = Settings()
-        settings.defaultLayout = "ledger"
-        settings.layoutByDisplay = ["screen-1": "board"]
-        XCTAssertEqual(
-            settings.layout(for: "screen-1", known: ["ledger", "board", "card"]), "board")
-    }
-
     // MARK: - Concurrency
 
     /// A manual Refresh during a slow poll must not produce two writes whose order is luck.

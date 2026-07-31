@@ -1,6 +1,6 @@
 import Foundation
 import TMUDesign
-import TMURender
+import TMUKit
 import TMUWidgets
 
 /// Brand assets, emitted from `BrandMark`'s geometry.

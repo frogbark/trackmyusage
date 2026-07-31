@@ -14,11 +14,8 @@ let package = Package(
     products: [
         .library(name: "TMUKit", targets: ["TMUKit"]),
         .library(name: "TMUProviders", targets: ["TMUProviders"]),
-        .library(name: "TMURender", targets: ["TMURender"]),
-        .library(name: "TMUDesktop", targets: ["TMUDesktop"]),
         .library(name: "TMUWidgets", targets: ["TMUWidgets"]),
         .executable(name: "TMULink", targets: ["TMULink"]),
-        .executable(name: "tmud", targets: ["tmud"]),
         .executable(name: "tmu", targets: ["tmu"]),
         .executable(name: "TMUApp", targets: ["TMUApp"]),
         .executable(name: "TMUWidgetExtension", targets: ["TMUWidgetExtension"]),
@@ -32,25 +29,23 @@ let package = Package(
     targets: [
         // The palette, the ok/warn/over classification, and the numbers behind them.
         // Depends on nothing, for the same reason TMUProviders does: SwiftUI adapts at the
-        // consumer (a Color extension in the app), so this stays buildable anywhere and the
-        // SVG renderer keeps emitting plain hex as presentation attributes.
+        // consumer (a Color extension in TMUWidgets), so this stays buildable anywhere —
+        // which the Linux job in CI proves on every push.
         .target(name: "TMUDesign"),
         .target(name: "TMUKit", dependencies: ["Yams", "TMUDesign"]),
-        // Deliberately depends on nothing. TMUKit is macOS-bound — InstanceLocator
-        // reads /Applications, SyncApplier imports Darwin — and the usage layer has to
-        // build on Linux and Windows, where the wallpaper runs but Claude Desktop does not
-        // exist. Claude-specific reading stays behind an adapter that depends on both.
+        // Deliberately depends on nothing. TMUKit is macOS-bound — InstanceLocator reads
+        // /Applications, SyncApplier imports Darwin — and the usage layer must stay portable
+        // so an adapter can be written and tested anywhere. Claude-specific reading stays
+        // behind an adapter that depends on both.
         .target(name: "TMUProviders"),
         // The bridge, and the only place the two worlds meet: Claude's local history is
         // read through TMUKit, then mapped onto the provider-neutral shape.
         .target(
             name: "TMUClaude",
             dependencies: ["TMUKit", "TMUProviders"]),
-        // Text in, text out. Producing SVG rather than pixels keeps the whole visual
-        // design a pure function that diffs in a golden-file test, and leaves rasterising
-        // as the only part that needs a platform.
-        // The shape every surface renders: raw snapshots interpreted once, so the wallpaper
-        // and the menu bar cannot disagree about what a reading means.
+        // The shape every surface renders: raw snapshots interpreted once, so the widget and
+        // the menu bar cannot disagree about what a reading means. Also holds DemoSnapshots,
+        // the frozen fixtures the website images and the goldens are both built from.
         .target(name: "TMUTelemetry", dependencies: ["TMUProviders", "TMUDesign"]),
         // The widget's view model and its views. A library rather than code inside the
         // extension because three consumers import it: the extension, `tmu assets` for the
@@ -69,23 +64,12 @@ let package = Package(
         // being evidence of what the widget actually draws.
         .target(name: "TMUWidgets", dependencies: ["TMUTelemetry", "TMUDesign"]),
         .executableTarget(name: "TMUWidgetExtension", dependencies: ["TMUWidgets"]),
-        .target(name: "TMURender", dependencies: ["TMUProviders", "TMUDesign", "TMUTelemetry"]),
-        // Reading and writing the desktop background is the one genuinely per-OS piece:
-        // NSWorkspace here, a per-desktop-environment shell-out on Linux, and
-        // SystemParametersInfoW on Windows.
-        .target(name: "TMUDesktop", dependencies: ["TMURender"]),
         .executableTarget(name: "TMULink"),
-        .executableTarget(
-            name: "tmud",
-            dependencies: [
-                "TMUDesktop", "TMURender", "TMUProviders",
-                "TMUClaude", "TMUKit",
-            ]),
-        // TMURender is here only for `assets wallpaper`, which emits the website's images
-        // from the renderer that draws the real thing rather than from a mockup.
+        // TMUWidgets is here for `assets widget`, which emits the website's images from the
+        // code that draws the real widget rather than from a mockup.
         .executableTarget(
             name: "tmu",
-            dependencies: ["TMUKit", "TMUProviders", "TMUDesign", "TMURender", "TMUWidgets"]),
+            dependencies: ["TMUKit", "TMUProviders", "TMUDesign", "TMUWidgets"]),
         // The app, minus its @main and its Scenes. Splitting the library out is what makes
         // any of it testable: an executable target cannot be @testable imported cleanly, and
         // everything worth testing here is view-model logic anyway.
@@ -109,12 +93,6 @@ let package = Package(
             dependencies: ["TMUTelemetry", "TMUProviders", "TMUDesign"]),
         .testTarget(name: "TMUKitTests", dependencies: ["TMUKit"]),
         .testTarget(name: "TMUProvidersTests", dependencies: ["TMUProviders"]),
-        .testTarget(
-            name: "TMUDesktopTests",
-            dependencies: ["TMUDesktop", "TMURender"]),
-        .testTarget(
-            name: "TMURenderTests",
-            dependencies: ["TMURender", "TMUProviders", "TMUTelemetry", "TMUDesign"]),
         .testTarget(
             name: "TMUClaudeTests",
             dependencies: ["TMUClaude", "TMUKit", "TMUProviders"]),
