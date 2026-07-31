@@ -1,8 +1,8 @@
 import Foundation
 
-/// The three ways migration touches the world. Injected so the runner can be tested against
+/// The four ways migration touches the world. Injected so the runner can be tested against
 /// failures that are impractical to stage for real — a locked keychain, a launchctl that
-/// refuses, a move onto a full disk.
+/// refuses, a move onto a full disk, a recorded wallpaper that has since been deleted.
 
 public protocol FileMoving: Sendable {
     func exists(_ url: URL) -> Bool
@@ -29,6 +29,19 @@ public protocol LaunchctlRunning: Sendable {
     func bootout(label: String) throws
     func bootstrap(plist: URL) throws
     func enable(label: String) throws
+}
+
+/// Setting the desktop background — the last surviving piece of the wallpaper feature.
+///
+/// It exists solely to undo something this project did. An install that ran the wallpaper
+/// agent has a rendered PNG set as its background, and macOS keeps no wallpaper history, so
+/// deleting the feature without this would leave that render on the desktop permanently with
+/// no way back. `TMUDesktop` is gone; this is the one call from it that had to outlive it.
+///
+/// A seam rather than a direct AppKit call so the teardown step stays testable, like every
+/// other step in the runner.
+public protocol DesktopRestoring: Sendable {
+    func setDesktopImage(_ url: URL) throws
 }
 
 // MARK: - Real implementations
@@ -96,6 +109,24 @@ public struct SystemLaunchctl: LaunchctlRunning {
             throw MigrationError.launchctl(arguments.joined(separator: " "), text.trimmed)
         }
         return String(data: output, encoding: .utf8) ?? ""
+    }
+}
+
+#endif
+
+#if canImport(AppKit)
+
+import AppKit
+
+public struct AppKitDesktopRestorer: DesktopRestoring {
+    public init() {}
+
+    public func setDesktopImage(_ url: URL) throws {
+        // Every screen, not the main one. The wallpaper agent painted them all, so restoring
+        // one would leave the others showing a render of usage that is no longer updating.
+        for screen in NSScreen.screens {
+            try NSWorkspace.shared.setDesktopImageURL(url, for: screen, options: [:])
+        }
     }
 }
 

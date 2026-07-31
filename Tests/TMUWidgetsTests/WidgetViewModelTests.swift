@@ -263,10 +263,14 @@ extension WidgetViewModelTests {
 extension WidgetViewModelTests {
 
     /// web/widgets.json is byte-compared by check-generated.sh, and a plain JSONEncoder emits
-    /// the same value with its keys in a different order each call. Without sorted keys the
-    /// committed file would differ on every regeneration and CI would fail for a reason no
-    /// commit could fix — which invites "fixing" it by excluding the file from comparison,
-    /// destroying the guarantee it exists to provide.
+    /// keys in dictionary order. Swift seeds its hasher per process, so that order is often
+    /// steady *within* a run and differs *between* runs — which is the axis that matters here,
+    /// because CI regenerates the file in a different process from the one that committed it.
+    /// Unsorted keys would fail for a reason no commit could fix, inviting a "fix" that
+    /// excludes the file and quietly destroys the guarantee it provides.
+    ///
+    /// The cross-process half cannot be asserted from inside one process; check-generated.sh
+    /// covers it by construction. This covers the rest.
     func testTheCanonicalEncodingIsByteStableAcrossCalls() throws {
         let vm = WidgetViewModel.make(from: Fixtures.model(at: now), family: .large, at: now)
 
@@ -276,15 +280,4 @@ extension WidgetViewModelTests {
         }
     }
 
-    /// The property above is exactly what a bare JSONEncoder does not have. If this ever
-    /// starts passing, Foundation has changed and the comment on CanonicalJSON is stale.
-    func testAPlainEncoderIsNotByteStableWhichIsWhyCanonicalJSONExists() throws {
-        let vm = WidgetViewModel.make(from: Fixtures.model(at: now), family: .large, at: now)
-        let plain = JSONEncoder()
-
-        let encodings = try (0..<40).map { _ in try plain.encode(vm) }
-        XCTAssertGreaterThan(
-            Set(encodings).count, 1,
-            "a plain JSONEncoder became stable; CanonicalJSON's rationale needs revisiting")
-    }
 }

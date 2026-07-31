@@ -13,6 +13,7 @@ public struct MigrationRunner: Sendable {
     private let files: any FileMoving
     private let keychain: any KeychainRelabeling
     private let launchctl: any LaunchctlRunning
+    private let desktop: any DesktopRestoring
     private let newKeychainService: String
     private let legacyKeychainService: String
 
@@ -21,6 +22,7 @@ public struct MigrationRunner: Sendable {
         files: any FileMoving,
         keychain: any KeychainRelabeling,
         launchctl: any LaunchctlRunning,
+        desktop: any DesktopRestoring,
         legacyKeychainService: String,
         newKeychainService: String
     ) {
@@ -28,6 +30,7 @@ public struct MigrationRunner: Sendable {
         self.files = files
         self.keychain = keychain
         self.launchctl = launchctl
+        self.desktop = desktop
         self.legacyKeychainService = legacyKeychainService
         self.newKeychainService = newKeychainService
     }
@@ -45,7 +48,7 @@ public struct MigrationRunner: Sendable {
             switch step {
             case .keychain: return try migrateKeychain()
             case .caches: return try move(LegacyPaths.caches(home: home))
-            case .wallpaperState: return try scrubWallpaperState()
+            case .wallpaperTeardown: return try tearDownWallpaper()
             case .ownedFiles: return try moveOwnedFiles()
             case .logs: return try move(LegacyPaths.logs(home: home))
             case .agents: return try migrateAgents()
@@ -88,52 +91,78 @@ public struct MigrationRunner: Sendable {
         return moved == 0 ? .skipped("no owned files beside the instance profiles") : .done
     }
 
-    /// Forget a remembered wallpaper that is one of our own renders.
+    /// Take the wallpaper feature off this machine.
     ///
-    /// `WallpaperOrigin.pristine` refuses to composite onto anything inside the *current*
-    /// output directory. A pristine recorded before that guard existed points into the old
-    /// one, which the new guard does not recognise as ours — so the daemon would happily
-    /// composite the overlay onto a previous overlay, stacking scrims a little darker every
-    /// five minutes, with nothing anywhere reporting an error.
-    private func scrubWallpaperState() throws -> StepOutcome {
-        let state = LegacyPaths.caches(home: home).new
-            .appendingPathComponent("wallpaper/state.json")
-        guard files.exists(state) else { return .skipped("no wallpaper state to scrub") }
+    /// Deleting the code is not the same as removing the feature from an install that has it.
+    /// Such a machine has a LaunchAgent on a 300s timer invoking a `tmud` that no longer
+    /// exists — failing silently every five minutes, which is precisely the failure mode
+    /// install-wallpaper-agent.sh warned about — and a rendered PNG set as its desktop
+    /// background. macOS keeps no wallpaper history, so without this step that render is
+    /// permanent and the user has no way to discover what it replaced.
+    ///
+    /// So the migration *grew* a step where it might have lost one. Three things, in an order
+    /// that matters: stop the agent first, or it repaints the desktop between the restore and
+    /// the delete; restore before deleting the renders, or the file being restored from is
+    /// gone; and only then remove the renders.
+    ///
+    /// Idempotent throughout. Every part reports what it actually did, so a partial run — the
+    /// plist gone but the desktop not yet restored — completes on the next launch rather than
+    /// being mistaken for finished.
+    private func tearDownWallpaper() throws -> StepOutcome {
+        var did: [String] = []
 
-        let raw = try files.read(state)
-        // `try?`, not `try`: JSONSerialization throws on malformed input, and a state file
-        // we cannot parse is not a migration failure. WallpaperState.load already treats
-        // corruption as empty and rebuilds; reporting it as failed here would keep the
-        // receipt incomplete forever and re-run every other step on every launch.
+        // 1. Stop it. Both labels: an install may have been renamed before the feature was
+        // dropped, or may not. Booting out a label that is not loaded is not an error.
+        for label in LegacyPaths.wallpaperAgentLabels {
+            let plist = LegacyPaths.launchAgentsDirectory(home: home)
+                .appendingPathComponent("\(label).plist")
+            try launchctl.bootout(label: label)
+            guard files.exists(plist) else { continue }
+            try files.remove(plist)
+            did.append("stopped \(label)")
+        }
+
+        // 2. Put the desktop back, from whichever support directory still holds the record.
+        if let restored = try restoreRecordedWallpaper() {
+            did.append(restored)
+        }
+
+        // 3. Only now delete the renders.
+        for directory in LegacyPaths.renderedWallpaperDirectories(home: home)
+        where files.exists(directory) {
+            try files.remove(directory)
+            did.append("removed \(directory.lastPathComponent) renders")
+        }
+
+        return did.isEmpty ? .skipped("no wallpaper install to remove") : .done
+    }
+
+    /// Restore the background the wallpaper agent replaced, if it is still there to restore.
+    ///
+    /// Returns nil when there was nothing recorded, and a note when there was a record but the
+    /// file it names has since been deleted. That second case is reported rather than treated
+    /// as a failure: a person who deleted their old wallpaper is not a migration that went
+    /// wrong, and failing here would re-run every other step on the next launch forever.
+    private func restoreRecordedWallpaper() throws -> String? {
         guard
-            let root = (try? JSONSerialization.jsonObject(with: raw)) as? [String: Any],
-            var displays = root["displays"] as? [String: Any]
-        else {
-            return .skipped("wallpaper state was not in the expected shape")
+            let record = LegacyPaths.recordedOriginalWallpaper(home: home)
+                .first(where: files.exists)
+        else { return nil }
+
+        let path =
+            String(data: try files.read(record), encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        try files.remove(record)
+
+        guard !path.isEmpty else { return "no original was recorded" }
+        let original = URL(fileURLWithPath: path)
+        guard files.exists(original) else {
+            return
+                "recorded original is gone (\(original.lastPathComponent)) — set one in System Settings"
         }
 
-        let ours = [LegacyPaths.caches(home: home).old, LegacyPaths.caches(home: home).new]
-            .map { $0.appendingPathComponent("wallpaper").path }
-
-        var scrubbed = 0
-        for (id, value) in displays {
-            guard var display = value as? [String: Any],
-                let pristine = display["pristine"] as? String
-            else { continue }
-            let path = URL(string: pristine)?.path ?? pristine
-            guard ours.contains(where: { path.hasPrefix($0) }) else { continue }
-            display.removeValue(forKey: "pristine")
-            displays[id] = display
-            scrubbed += 1
-        }
-        guard scrubbed > 0 else { return .skipped("no self-referential wallpaper recorded") }
-
-        var updated = root
-        updated["displays"] = displays
-        let data = try JSONSerialization.data(
-            withJSONObject: updated, options: [.prettyPrinted, .sortedKeys])
-        try files.write(data, to: state)
-        return .done
+        try desktop.setDesktopImage(original)
+        return "restored \(original.lastPathComponent)"
     }
 
     /// Relabel the launch agents, but only when there is something for them to run.

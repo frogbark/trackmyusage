@@ -53,21 +53,29 @@ final class MigrationIntegrationTests: XCTestCase {
         let environment = MigrationEnvironment(
             home: home, exists: { files.exists($0) }, hasLegacyKeychainItems: { false })
         let plan = MigrationPlan.probe(environment)
-        XCTAssertEqual(plan.steps, [.caches, .wallpaperState, .logs, .ownedFiles])
+        XCTAssertEqual(plan.steps, [.caches, .logs, .ownedFiles, .wallpaperTeardown])
 
         let receipt = MigrationRunner(
             home: home, files: files, keychain: FakeKeychain(), launchctl: FakeLaunchctl(),
+            desktop: FakeDesktop(),
             legacyKeychainService: "old", newKeychainService: "new"
         ).run(plan)
 
         XCTAssertTrue(receipt.isComplete, "\(receipt.outcomes)")
 
         // Moved.
-        XCTAssertTrue(exists("Library/Caches/TrackMyUsage/wallpaper/desktop-a.png"))
         XCTAssertTrue(exists("Library/Logs/TrackMyUsage/wallpaper.log"))
-        XCTAssertTrue(exists("Library/Application Support/TrackMyUsage/original-wallpaper.txt"))
         XCTAssertFalse(exists("Library/Caches/Claudruple"))
         XCTAssertFalse(exists("Library/Logs/Claudruple"))
+
+        // Removed. The renders moved with the caches directory and were then deleted by the
+        // teardown, and the record of the original was consumed restoring it. A machine that
+        // finishes this migration has no wallpaper footprint left at all — which is the point:
+        // the code is gone, so anything still pointing at it is a timer failing in silence or
+        // a desktop nobody can change back.
+        XCTAssertFalse(exists("Library/Caches/TrackMyUsage/wallpaper"))
+        XCTAssertFalse(exists("Library/Application Support/TrackMyUsage/original-wallpaper.txt"))
+        XCTAssertFalse(exists("Library/Application Support/Claudruple/original-wallpaper.txt"))
 
         // Untouched. This is the assertion the whole design exists to make true: the profile
         // path is compiled into the clone's launcher shim, so moving it signs the account out.
@@ -77,20 +85,6 @@ final class MigrationIntegrationTests: XCTestCase {
         XCTAssertTrue(
             exists("Library/Application Support/Claudruple/Claude Two/Local Storage/db"))
 
-        // The self-referential pristine was forgotten rather than carried across.
-        let state = home.appendingPathComponent(
-            "Library/Caches/TrackMyUsage/wallpaper/state.json")
-        let root = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: try Data(contentsOf: state)) as? [String: Any])
-        let displays = try XCTUnwrap(root["displays"] as? [String: Any])
-        let screen = try XCTUnwrap(displays["screen-1"] as? [String: Any])
-        XCTAssertNil(
-            screen["pristine"],
-            """
-            A remembered wallpaper pointing at one of our own renders survived the move. \
-            The daemon would composite the overlay onto a previous overlay, darkening the \
-            desktop a little every five minutes, and report nothing.
-            """)
     }
 
     func testRunningItTwiceChangesNothingTheSecondTime() throws {
@@ -102,6 +96,7 @@ final class MigrationIntegrationTests: XCTestCase {
         func run() -> MigrationReceipt {
             MigrationRunner(
                 home: home, files: files, keychain: FakeKeychain(), launchctl: FakeLaunchctl(),
+                desktop: FakeDesktop(),
                 legacyKeychainService: "old", newKeychainService: "new"
             ).run(MigrationPlan.probe(environment))
         }
